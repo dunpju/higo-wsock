@@ -9,11 +9,12 @@ import (
 
 func main() {
 	r := gin.Default()
-	r.Use(wsock.WsConnMiddleWare())
+	r.Use(wsock.WsConnMiddleWare(r))
 	r.Handle("GET", "/conn", func(context *gin.Context) {
-		context.String(200, "test ws conn")
+		wsock.WsRespString("test ws conn")
+		fmt.Println("hhh")
+		//context.String(200, "fff")
 	})
-	fmt.Println(r.Routes())
 	err := r.Run(":8080")
 	if err != nil {
 		log.Fatalln(err)

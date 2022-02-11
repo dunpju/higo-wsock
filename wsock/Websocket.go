@@ -76,13 +76,22 @@ func (this *WebsocketClient) Remove(conn *websocket.Conn) {
 }
 
 //ws连接中间件
-func WsConnMiddleWare() gin.HandlerFunc {
+func WsConnMiddleWare(engine *gin.Engine) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
+		router.AddServe(WebsocketServe)
+		for _, route := range engine.Routes() {
+			if !router.GetRoutes(WebsocketServe).Exist(route.Method, route.Path) {
+				router.AddRoute(route.Method, route.Path, route.HandlerFunc, router.Flag(route.Handler))
+			}
+		}
+
 		conn := websocketConnFunc(ctx)
 		// 设置变量到Context的key中，可以通过Get()取
 		ctx.Set(WsConnIp, conn)
+
 		// 执行函数
 		ctx.Next()
+		//status := ctx.Writer.Status()
 	}
 }
 
