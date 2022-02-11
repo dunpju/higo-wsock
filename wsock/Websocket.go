@@ -91,6 +91,7 @@ func WsConnMiddleWare(engine *gin.Engine) gin.HandlerFunc {
 		for _, route := range engine.Routes() {
 			if !router.GetRoutes(WebsocketServe).Exist(route.Method, route.Path) {
 				router.AddRoute(route.Method, route.Path, route.HandlerFunc, router.Flag(route.Handler))
+				route.HandlerFunc = WsUpgraderHandle()
 			}
 		}
 
@@ -100,12 +101,11 @@ func WsConnMiddleWare(engine *gin.Engine) gin.HandlerFunc {
 
 		// 执行函数
 		ctx.Next()
-		fmt.Println(103, ctx.Writer.Status())
 	}
 }
 
 // 连接升级协议handle
-func WsUpgraderHandle(route *router.Route) gin.HandlerFunc {
+func WsUpgraderHandle() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		_, ok := ctx.Get(WsConnIp)
 		if !ok {

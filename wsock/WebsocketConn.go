@@ -145,7 +145,7 @@ func (this *WebsocketConn) dispatch(msg *WsReadMessage) WsWriteMessage {
 	request.Header.Set("Content-Type", "application/json")
 	ctx.Request = request
 	handle.(gin.HandlerFunc)(ctx)
-	fmt.Println(147, ctx.Writer.Status())
+	fmt.Println(148, ctx.Writer.Status())
 	//return handle.(func(*gin.Context) WsWriteMessage)(ctx)
 	return WsRespString("ggg")
 }

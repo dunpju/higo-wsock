@@ -15,7 +15,7 @@ func main() {
 		fmt.Println(context.Writer)
 		//wsock.WsRespString("ttt")
 		//wsock.WsConn(context).Conn().WriteMessage(websocket.TextMessage, []byte("ttt"))
-		context.String(200, "fff")
+		//context.String(200, "fff")
 	})
 	err := r.Run(":8080")
 	if err != nil {
