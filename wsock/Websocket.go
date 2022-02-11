@@ -100,6 +100,7 @@ func WsConnMiddleWare(engine *gin.Engine) gin.HandlerFunc {
 
 		// 执行函数
 		ctx.Next()
+		fmt.Println(103, ctx.Writer.Status())
 	}
 }
 

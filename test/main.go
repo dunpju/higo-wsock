@@ -12,6 +12,7 @@ func main() {
 	r.Use(wsock.WsConnMiddleWare(r))
 	r.Handle("GET", "/conn", func(context *gin.Context) {
 		fmt.Println("hhh")
+		fmt.Println(context.Writer)
 		//wsock.WsRespString("ttt")
 		//wsock.WsConn(context).Conn().WriteMessage(websocket.TextMessage, []byte("ttt"))
 		context.String(200, "fff")

@@ -87,7 +87,6 @@ func (this *WebsocketConn) ReadLoop() {
 			this.Close()
 			break
 		}
-		fmt.Println(90, this.readChan, t, message, err)
 		this.readChan <- NewReadMessage(t, message)
 	}
 }
@@ -113,8 +112,10 @@ loop:
 func (this *WebsocketConn) HandlerLoop() {
 	defer func() {
 		if r := recover(); r != nil {
-			logger.LoggerStack(r, runtimeutil.GoroutineID())
-			this.writeChan <- WsRespError(WsRecoverHandle(r))
+			if "http: connection has been hijacked" != fmt.Sprintf("%s", r) {
+				logger.LoggerStack(r, runtimeutil.GoroutineID())
+				this.writeChan <- WsRespError(WsRecoverHandle(r))
+			}
 		}
 	}()
 loop:
@@ -132,8 +133,10 @@ loop:
 
 func (this *WebsocketConn) dispatch(msg *WsReadMessage) WsWriteMessage {
 	handle := this.route.Handle()
+	fmt.Println("dispatch")
 	//ctx := &gin.Context{Request: &http.Request{PostForm: make(url.Values)}}
-	ctx := this.ctx.Copy()
+	//ctx := this.ctx.Copy()
+	ctx := this.ctx
 	reader := bytes.NewReader(msg.MessageData)
 	request, err := http.NewRequest(router.POST, this.route.AbsolutePath(), reader)
 	if err != nil {
@@ -142,8 +145,9 @@ func (this *WebsocketConn) dispatch(msg *WsReadMessage) WsWriteMessage {
 	request.Header.Set("Content-Type", "application/json")
 	ctx.Request = request
 	handle.(gin.HandlerFunc)(ctx)
-	fmt.Println(145, ctx.Writer.Status())
-	return handle.(func(*gin.Context) WsWriteMessage)(ctx)
+	fmt.Println(147, ctx.Writer.Status())
+	//return handle.(func(*gin.Context) WsWriteMessage)(ctx)
+	return WsRespString("ggg")
 }
 
 func WsConn(ctx *gin.Context) *WebsocketConn {
