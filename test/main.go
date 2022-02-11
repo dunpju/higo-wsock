@@ -11,9 +11,10 @@ func main() {
 	r := gin.Default()
 	r.Use(wsock.WsConnMiddleWare(r))
 	r.Handle("GET", "/conn", func(context *gin.Context) {
-		wsock.WsRespString("test ws conn")
 		fmt.Println("hhh")
-		//context.String(200, "fff")
+		//wsock.WsRespString("ttt")
+		//wsock.WsConn(context).Conn().WriteMessage(websocket.TextMessage, []byte("ttt"))
+		context.String(200, "fff")
 	})
 	err := r.Run(":8080")
 	if err != nil {

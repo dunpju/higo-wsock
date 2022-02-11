@@ -2,6 +2,7 @@ package wsock
 
 import (
 	"bytes"
+	"fmt"
 	"gitee.com/dengpju/higo-code/code"
 	"github.com/dengpju/higo-logger/logger"
 	"github.com/dengpju/higo-router/router"
@@ -11,7 +12,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"net/http"
-	"net/url"
 	"sync"
 	"time"
 )
@@ -48,6 +48,7 @@ func init() {
 type WsRecoverFunc func(r interface{}) string
 
 type WebsocketConn struct {
+	ctx       *gin.Context
 	route     *router.Route
 	conn      *websocket.Conn
 	readChan  chan *WsReadMessage
@@ -55,13 +56,22 @@ type WebsocketConn struct {
 	closeChan chan byte
 }
 
-func NewWebsocketConn(route *router.Route, conn *websocket.Conn) *WebsocketConn {
-	return &WebsocketConn{route: route, conn: conn, readChan: make(chan *WsReadMessage),
+func NewWebsocketConn(ctx *gin.Context, route *router.Route, conn *websocket.Conn) *WebsocketConn {
+	return &WebsocketConn{ctx: ctx, route: route, conn: conn, readChan: make(chan *WsReadMessage),
 		writeChan: make(chan WsWriteMessage), closeChan: make(chan byte)}
 }
 
 func (this *WebsocketConn) Conn() *websocket.Conn {
 	return this.conn
+}
+
+func (this *WebsocketConn) Close() {
+	err := this.conn.Close()
+	if err != nil {
+		panic(err)
+	}
+	WsContainer.Remove(this.conn)
+	this.closeChan <- 1
 }
 
 func (this *WebsocketConn) Ping(waittime time.Duration) {
@@ -77,17 +87,9 @@ func (this *WebsocketConn) ReadLoop() {
 			this.Close()
 			break
 		}
+		fmt.Println(90, this.readChan, t, message, err)
 		this.readChan <- NewReadMessage(t, message)
 	}
-}
-
-func (this *WebsocketConn) Close() {
-	err := this.conn.Close()
-	if err != nil {
-		panic(err)
-	}
-	WsContainer.Remove(this.conn)
-	this.closeChan <- 1
 }
 
 func (this *WebsocketConn) WriteLoop() {
@@ -130,12 +132,17 @@ loop:
 
 func (this *WebsocketConn) dispatch(msg *WsReadMessage) WsWriteMessage {
 	handle := this.route.Handle()
-	ctx := &gin.Context{Request: &http.Request{PostForm: make(url.Values)}}
+	//ctx := &gin.Context{Request: &http.Request{PostForm: make(url.Values)}}
+	ctx := this.ctx.Copy()
 	reader := bytes.NewReader(msg.MessageData)
-	request, _ := http.NewRequest(router.POST, this.route.AbsolutePath(), reader)
+	request, err := http.NewRequest(router.POST, this.route.AbsolutePath(), reader)
+	if err != nil {
+		panic(err)
+	}
 	request.Header.Set("Content-Type", "application/json")
 	ctx.Request = request
-
+	handle.(gin.HandlerFunc)(ctx)
+	fmt.Println(145, ctx.Writer.Status())
 	return handle.(func(*gin.Context) WsWriteMessage)(ctx)
 }
 
@@ -161,7 +168,7 @@ func websocketConnFunc(ctx *gin.Context) string {
 
 	route := router.GetRoutes(WebsocketServe).Route(ctx.Request.Method, ctx.Request.URL.Path).SetHeader(ctx.Request.Header)
 
-	WsContainer.Store(route, client)
+	WsContainer.Store(ctx, route, client)
 	return client.RemoteAddr().String()
 }
 

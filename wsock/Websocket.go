@@ -1,6 +1,7 @@
 package wsock
 
 import (
+	"fmt"
 	"github.com/dengpju/higo-router/router"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -51,8 +52,8 @@ func NewWebsocketClient() *WebsocketClient {
 	return &WebsocketClient{}
 }
 
-func (this *WebsocketClient) Store(route *router.Route, conn *websocket.Conn) {
-	wsConn := NewWebsocketConn(route, conn)
+func (this *WebsocketClient) Store(ctx *gin.Context, route *router.Route, conn *websocket.Conn) {
+	wsConn := NewWebsocketConn(ctx, route, conn)
 	this.clients.Store(conn.RemoteAddr().String(), wsConn)
 	go wsConn.Ping(WsPitpatSleep) //心跳
 	go wsConn.WriteLoop()         //写循环
@@ -77,8 +78,16 @@ func (this *WebsocketClient) Remove(conn *websocket.Conn) {
 
 //ws连接中间件
 func WsConnMiddleWare(engine *gin.Engine) gin.HandlerFunc {
+	router.AddServe(WebsocketServe)
 	return func(ctx *gin.Context) {
-		router.AddServe(WebsocketServe)
+		defer func() {
+			if r := recover(); r != nil {
+				//协议转换
+				if "http: connection has been hijacked" != fmt.Sprintf("%s", r) {
+					panic(r)
+				}
+			}
+		}()
 		for _, route := range engine.Routes() {
 			if !router.GetRoutes(WebsocketServe).Exist(route.Method, route.Path) {
 				router.AddRoute(route.Method, route.Path, route.HandlerFunc, router.Flag(route.Handler))
@@ -91,7 +100,6 @@ func WsConnMiddleWare(engine *gin.Engine) gin.HandlerFunc {
 
 		// 执行函数
 		ctx.Next()
-		//status := ctx.Writer.Status()
 	}
 }
 
