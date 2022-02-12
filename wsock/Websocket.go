@@ -22,6 +22,7 @@ const (
 var (
 	Upgrader      websocket.Upgrader
 	WsPingHandle  WebsocketPingFunc
+	WsPongHandle  WebsocketPingFunc
 	WsContainer   *WebsocketClient
 	WsCheckOrigin WebsocketCheckFunc
 	WsPitpatSleep time.Duration
@@ -35,6 +36,7 @@ func init() {
 		CheckOrigin: WsCheckOrigin,
 	}
 	WsPingHandle = wsPingFunc
+	WsPongHandle = wsPongFunc
 	WsContainer = NewWebsocketClient()
 	WsPitpatSleep = time.Second * 1
 }

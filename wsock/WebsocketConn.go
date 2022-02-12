@@ -8,7 +8,6 @@ import (
 	"github.com/dengpju/higo-router/router"
 	"github.com/dengpju/higo-throw/exception"
 	"github.com/dengpju/higo-utils/utils/maputil"
-	"github.com/dengpju/higo-utils/utils/randomutil"
 	"github.com/dengpju/higo-utils/utils/runtimeutil"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -83,6 +82,12 @@ func (this *WebsocketConn) close() {
 func (this *WebsocketConn) ping(waittime time.Duration) {
 	for {
 		WsPingHandle(this, waittime)
+	}
+}
+
+func (this *WebsocketConn) pong(waittime time.Duration) {
+	for {
+		WsPongHandle(this, waittime)
 	}
 }
 
@@ -169,14 +174,14 @@ func (this *WebsocketConn) WriteMap(message maputil.ArrayMap) {
 
 func (this *WebsocketConn) WriteStruct(message interface{}) {
 	go func(msg interface{}) {
-		sleep := randomutil.Random().BetweenInt(1, 3)
-		if sleep%2 == 0 {
-			time.Sleep(time.Second * time.Duration(sleep))
-			fmt.Print(this.ctx.Writer, "休眠", sleep)
-			fmt.Println()
-		} else {
-			fmt.Println(this.ctx.Writer, "未休眠")
-		}
+		//sleep := randomutil.Random().BetweenInt(1, 3)
+		//if sleep%2 == 0 {
+		//	time.Sleep(time.Second * time.Duration(sleep))
+		//	fmt.Print(this.ctx.Writer, "休眠", sleep)
+		//	fmt.Println()
+		//} else {
+		//	fmt.Println(this.ctx.Writer, "未休眠")
+		//}
 		this.dispatchChan <- WsRespStruct(msg)
 	}(message)
 }
@@ -226,7 +231,7 @@ func websocketConnFunc(ctx *gin.Context) string {
 func wsPingFunc(websocketConn *WebsocketConn, waittime time.Duration) {
 	websocketConn.lock.Lock()
 	defer websocketConn.lock.Unlock()
-	time.Sleep(waittime)
+	time.Sleep(time.Second * 5)
 	err := websocketConn.conn.WriteMessage(websocket.TextMessage, []byte("ping"))
 	if err != nil {
 		WsContainer.Remove(websocketConn.conn)
@@ -235,6 +240,8 @@ func wsPingFunc(websocketConn *WebsocketConn, waittime time.Duration) {
 }
 
 func wsPongFunc(websocketConn *WebsocketConn, waittime time.Duration) {
+	websocketConn.lock.Lock()
+	defer websocketConn.lock.Unlock()
 	time.Sleep(waittime)
 	err := websocketConn.conn.WriteMessage(websocket.TextMessage, []byte("pong"))
 	if err != nil {
