@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/dengpju/higo-wsock/wsock"
 	"github.com/gin-gonic/gin"
-	"github.com/gorilla/websocket"
 	"log"
 )
 
@@ -20,7 +19,7 @@ func main() {
 			panic(err)
 		}
 		fmt.Println("Conn", loginEntity)
-		wsock.WsConn(context).Conn().WriteMessage(websocket.TextMessage, []byte("ttt"))
+		wsock.Response(context).WriteStruct(loginEntity)
 	})
 	err := r.Run(":8080")
 	if err != nil {

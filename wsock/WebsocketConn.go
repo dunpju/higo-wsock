@@ -2,6 +2,7 @@ package wsock
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"gitee.com/dengpju/higo-code/code"
 	"github.com/dengpju/higo-logger/logger"
@@ -48,17 +49,18 @@ func init() {
 type WsRecoverFunc func(r interface{}) string
 
 type WebsocketConn struct {
-	ctx       *gin.Context
-	route     *router.Route
-	conn      *websocket.Conn
-	readChan  chan *WsReadMessage
-	writeChan chan WsWriteMessage
-	closeChan chan byte
+	ctx          *gin.Context
+	route        *router.Route
+	conn         *websocket.Conn
+	readChan     chan *WsReadMessage
+	writeChan    chan WsWriteMessage
+	dispatchChan chan WsWriteMessage
+	closeChan    chan byte
 }
 
 func NewWebsocketConn(ctx *gin.Context, route *router.Route, conn *websocket.Conn) *WebsocketConn {
 	return &WebsocketConn{ctx: ctx, route: route, conn: conn, readChan: make(chan *WsReadMessage),
-		writeChan: make(chan WsWriteMessage), closeChan: make(chan byte)}
+		writeChan: make(chan WsWriteMessage), dispatchChan: make(chan WsWriteMessage), closeChan: make(chan byte)}
 }
 
 func (this *WebsocketConn) Conn() *websocket.Conn {
@@ -74,13 +76,13 @@ func (this *WebsocketConn) Close() {
 	this.closeChan <- 1
 }
 
-func (this *WebsocketConn) Ping(waittime time.Duration) {
+func (this *WebsocketConn) ping(waittime time.Duration) {
 	for {
 		WsPingHandle(this, waittime)
 	}
 }
 
-func (this *WebsocketConn) ReadLoop() {
+func (this *WebsocketConn) readLoop() {
 	for {
 		t, message, err := this.conn.ReadMessage()
 		if err != nil {
@@ -91,7 +93,7 @@ func (this *WebsocketConn) ReadLoop() {
 	}
 }
 
-func (this *WebsocketConn) WriteLoop() {
+func (this *WebsocketConn) writeLoop() {
 loop:
 	for {
 		select {
@@ -109,13 +111,11 @@ loop:
 	}
 }
 
-func (this *WebsocketConn) HandlerLoop() {
+func (this *WebsocketConn) handlerLoop() {
 	defer func() {
 		if r := recover(); r != nil {
-			if "http: connection has been hijacked" != fmt.Sprintf("%s", r) {
-				logger.LoggerStack(r, runtimeutil.GoroutineID())
-				this.writeChan <- WsRespError(WsRecoverHandle(r))
-			}
+			logger.LoggerStack(r, runtimeutil.GoroutineID())
+			this.writeChan <- WsRespError(WsRecoverHandle(r))
 		}
 	}()
 loop:
@@ -133,9 +133,6 @@ loop:
 
 func (this *WebsocketConn) dispatch(msg *WsReadMessage) WsWriteMessage {
 	handle := this.route.Handle()
-	fmt.Println("dispatch")
-	//ctx := &gin.Context{Request: &http.Request{PostForm: make(url.Values)}}
-	//ctx := this.ctx.Copy()
 	ctx := this.ctx
 	reader := bytes.NewReader(msg.MessageData)
 	request, err := http.NewRequest(router.POST, this.route.AbsolutePath(), reader)
@@ -145,9 +142,43 @@ func (this *WebsocketConn) dispatch(msg *WsReadMessage) WsWriteMessage {
 	request.Header.Set("Content-Type", "application/json")
 	ctx.Request = request
 	handle.(gin.HandlerFunc)(ctx)
-	fmt.Println(148, ctx.Writer.Status())
-	//return handle.(func(*gin.Context) WsWriteMessage)(ctx)
-	return WsRespString("ggg")
+	fmt.Println(111)
+	return <-this.dispatchChan
+}
+
+func (this *WebsocketConn) WriteMessage(message string) {
+	err := this.Conn().WriteMessage(websocket.TextMessage, []byte(message))
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (this *WebsocketConn) WriteMap(message maputil.ArrayMap) {
+	err := this.Conn().WriteMessage(websocket.TextMessage, []byte(message.String()))
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (this *WebsocketConn) WriteStruct(message interface{}) {
+	go func(msg interface{}) {
+		this.dispatchChan <- WsRespStruct(msg)
+	}(message)
+}
+
+func (this *WebsocketConn) Error(message interface{}) {
+	mjson, err := json.Marshal(message)
+	if err != nil {
+		panic(err)
+	}
+	err = this.Conn().WriteMessage(websocket.TextMessage, mjson)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func Response(ctx *gin.Context) *WebsocketConn {
+	return WsConn(ctx)
 }
 
 func WsConn(ctx *gin.Context) *WebsocketConn {

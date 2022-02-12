@@ -1,7 +1,6 @@
 package wsock
 
 import (
-	"fmt"
 	"github.com/dengpju/higo-router/router"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -55,10 +54,10 @@ func NewWebsocketClient() *WebsocketClient {
 func (this *WebsocketClient) Store(ctx *gin.Context, route *router.Route, conn *websocket.Conn) {
 	wsConn := NewWebsocketConn(ctx, route, conn)
 	this.clients.Store(conn.RemoteAddr().String(), wsConn)
-	go wsConn.Ping(WsPitpatSleep) //心跳
-	go wsConn.WriteLoop()         //写循环
-	go wsConn.ReadLoop()          //读循环
-	go wsConn.HandlerLoop()       //处理控制循环
+	go wsConn.ping(WsPitpatSleep) //心跳
+	go wsConn.writeLoop()         //写循环
+	go wsConn.readLoop()          //读循环
+	go wsConn.handlerLoop()       //处理控制循环
 }
 
 func (this *WebsocketClient) SendAll(msg string) {
@@ -82,25 +81,19 @@ func WsConnMiddleWare(engine *gin.Engine) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		defer func() {
 			if r := recover(); r != nil {
-				//协议转换
-				if "http: connection has been hijacked" != fmt.Sprintf("%s", r) {
-					panic(r)
-				}
+				panic(r)
 			}
 		}()
 		for _, route := range engine.Routes() {
 			if !router.GetRoutes(WebsocketServe).Exist(route.Method, route.Path) {
 				router.AddRoute(route.Method, route.Path, route.HandlerFunc, router.Flag(route.Handler))
-				route.HandlerFunc = WsUpgraderHandle()
 			}
 		}
-
 		conn := websocketConnFunc(ctx)
 		// 设置变量到Context的key中，可以通过Get()取
 		ctx.Set(WsConnIp, conn)
-
-		// 执行函数
-		ctx.Next()
+		// 终止执行
+		ctx.Abort()
 	}
 }
 
