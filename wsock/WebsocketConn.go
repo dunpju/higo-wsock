@@ -49,6 +49,7 @@ func init() {
 type WsRecoverFunc func(r interface{}) string
 
 type WebsocketConn struct {
+	lock         sync.RWMutex
 	ctx          *gin.Context
 	route        *router.Route
 	conn         *websocket.Conn
@@ -68,10 +69,13 @@ func (this *WebsocketConn) Conn() *websocket.Conn {
 }
 
 func (this *WebsocketConn) Close() {
-	err := this.conn.Close()
-	if err != nil {
-		panic(err)
-	}
+	this.lock.Lock()
+	defer this.lock.Unlock()
+	this.close()
+}
+
+func (this *WebsocketConn) close() {
+	_ = this.conn.Close()
 	WsContainer.Remove(this.conn)
 	this.closeChan <- 1
 }
@@ -86,7 +90,7 @@ func (this *WebsocketConn) readLoop() {
 	for {
 		t, message, err := this.conn.ReadMessage()
 		if err != nil {
-			this.Close()
+			this.close()
 			break
 		}
 		this.readChan <- NewReadMessage(t, message)
@@ -98,15 +102,20 @@ loop:
 	for {
 		select {
 		case msg := <-this.writeChan:
+			this.lock.Lock()
 			if WsResperror == msg.MessageType {
 				_ = this.conn.WriteMessage(websocket.TextMessage, msg.MessageData)
-				this.Close()
+				this.close()
+				this.lock.Unlock()
 				break loop
 			}
-			if err := this.conn.WriteMessage(websocket.TextMessage, msg.MessageData); err != nil {
-				this.Close()
+			err := this.conn.WriteMessage(websocket.TextMessage, msg.MessageData)
+			if err != nil {
+				this.close()
+				this.lock.Unlock()
 				break loop
 			}
+			this.lock.Unlock()
 		}
 	}
 }
@@ -160,10 +169,14 @@ func (this *WebsocketConn) WriteMap(message maputil.ArrayMap) {
 
 func (this *WebsocketConn) WriteStruct(message interface{}) {
 	go func(msg interface{}) {
-		sleep := randomutil.Random().BetweenInt(0, 3)
-		time.Sleep(time.Second * time.Duration(sleep))
-		fmt.Print(this.ctx.Writer, "休眠", sleep)
-		fmt.Println()
+		sleep := randomutil.Random().BetweenInt(1, 3)
+		if sleep%2 == 0 {
+			time.Sleep(time.Second * time.Duration(sleep))
+			fmt.Print(this.ctx.Writer, "休眠", sleep)
+			fmt.Println()
+		} else {
+			fmt.Println(this.ctx.Writer, "未休眠")
+		}
 		this.dispatchChan <- WsRespStruct(msg)
 	}(message)
 }
@@ -211,6 +224,8 @@ func websocketConnFunc(ctx *gin.Context) string {
 }
 
 func wsPingFunc(websocketConn *WebsocketConn, waittime time.Duration) {
+	websocketConn.lock.Lock()
+	defer websocketConn.lock.Unlock()
 	time.Sleep(waittime)
 	err := websocketConn.conn.WriteMessage(websocket.TextMessage, []byte("ping"))
 	if err != nil {

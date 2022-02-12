@@ -2,11 +2,14 @@ package main
 
 import (
 	"fmt"
+	"github.com/dengpju/higo-utils/utils/randomutil"
+	"github.com/dengpju/higo-utils/utils/stringutil"
 	"github.com/dengpju/higo-wsock/wsock"
 	"github.com/gin-gonic/gin"
 	"log"
 )
 
+//jmeter 压测 https://www.bbsmax.com/A/8Bz8jog15x/
 func main() {
 	r := gin.Default()
 	r.Use(wsock.WsConnMiddleWare(r))
@@ -19,6 +22,8 @@ func main() {
 			panic(err)
 		}
 		fmt.Println("Conn", loginEntity)
+		ran := randomutil.Random().Int(1000)
+		loginEntity.Time = loginEntity.Time + stringutil.IntString(ran)
 		wsock.Response(context).WriteStruct(loginEntity)
 	})
 	err := r.Run(":8080")
