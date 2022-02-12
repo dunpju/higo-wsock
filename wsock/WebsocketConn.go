@@ -2,13 +2,13 @@ package wsock
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"gitee.com/dengpju/higo-code/code"
 	"github.com/dengpju/higo-logger/logger"
 	"github.com/dengpju/higo-router/router"
 	"github.com/dengpju/higo-throw/exception"
 	"github.com/dengpju/higo-utils/utils/maputil"
+	"github.com/dengpju/higo-utils/utils/randomutil"
 	"github.com/dengpju/higo-utils/utils/runtimeutil"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -147,41 +147,44 @@ func (this *WebsocketConn) dispatch(msg *WsReadMessage) WsWriteMessage {
 }
 
 func (this *WebsocketConn) WriteMessage(message string) {
-	err := this.Conn().WriteMessage(websocket.TextMessage, []byte(message))
-	if err != nil {
-		panic(err)
-	}
+	go func(msg string) {
+		this.dispatchChan <- WsRespString(msg)
+	}(message)
 }
 
 func (this *WebsocketConn) WriteMap(message maputil.ArrayMap) {
-	err := this.Conn().WriteMessage(websocket.TextMessage, []byte(message.String()))
-	if err != nil {
-		panic(err)
-	}
+	go func(msg maputil.ArrayMap) {
+		this.dispatchChan <- WsRespMap(msg)
+	}(message)
 }
 
 func (this *WebsocketConn) WriteStruct(message interface{}) {
 	go func(msg interface{}) {
+		sleep := randomutil.Random().BetweenInt(0, 3)
+		time.Sleep(time.Second * time.Duration(sleep))
+		fmt.Print(this.ctx.Writer, "休眠", sleep)
+		fmt.Println()
 		this.dispatchChan <- WsRespStruct(msg)
 	}(message)
 }
 
-func (this *WebsocketConn) Error(message interface{}) {
-	mjson, err := json.Marshal(message)
-	if err != nil {
-		panic(err)
-	}
-	err = this.Conn().WriteMessage(websocket.TextMessage, mjson)
-	if err != nil {
-		panic(err)
-	}
+func (this *WebsocketConn) WriteError(message string) {
+	go func(msg string) {
+		this.dispatchChan <- WsRespError(msg)
+	}(message)
+}
+
+func (this *WebsocketConn) WriteClose() {
+	go func() {
+		this.dispatchChan <- WsRespClose()
+	}()
 }
 
 func Response(ctx *gin.Context) *WebsocketConn {
-	return WsConn(ctx)
+	return conn(ctx)
 }
 
-func WsConn(ctx *gin.Context) *WebsocketConn {
+func conn(ctx *gin.Context) *WebsocketConn {
 	client, ok := ctx.Get(WsConnIp)
 	if !ok {
 		panic("websocket conn client non-existent")
@@ -210,6 +213,15 @@ func websocketConnFunc(ctx *gin.Context) string {
 func wsPingFunc(websocketConn *WebsocketConn, waittime time.Duration) {
 	time.Sleep(waittime)
 	err := websocketConn.conn.WriteMessage(websocket.TextMessage, []byte("ping"))
+	if err != nil {
+		WsContainer.Remove(websocketConn.conn)
+		return
+	}
+}
+
+func wsPongFunc(websocketConn *WebsocketConn, waittime time.Duration) {
+	time.Sleep(waittime)
+	err := websocketConn.conn.WriteMessage(websocket.TextMessage, []byte("pong"))
 	if err != nil {
 		WsContainer.Remove(websocketConn.conn)
 		return
