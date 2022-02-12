@@ -20,6 +20,7 @@ const (
 )
 
 var (
+	isCollect     bool
 	Upgrader      websocket.Upgrader
 	WsPingHandle  WebsocketPingFunc
 	WsPongHandle  WebsocketPingFunc
@@ -38,7 +39,7 @@ func init() {
 	WsPingHandle = wsPingFunc
 	WsPongHandle = wsPongFunc
 	WsContainer = NewWebsocketClient()
-	WsPitpatSleep = time.Second * 1
+	WsPitpatSleep = time.Second * 5
 }
 
 type WebsocketCheckFunc func(r *http.Request) bool
@@ -86,10 +87,13 @@ func WsConnMiddleWare(engine *gin.Engine) gin.HandlerFunc {
 				panic(r)
 			}
 		}()
-		for _, route := range engine.Routes() {
-			if !router.GetRoutes(WebsocketServe).Exist(route.Method, route.Path) {
-				router.AddRoute(route.Method, route.Path, route.HandlerFunc, router.Flag(route.Handler))
+		if !isCollect {
+			for _, route := range engine.Routes() {
+				if !router.GetRoutes(WebsocketServe).Exist(route.Method, route.Path) {
+					router.AddRoute(route.Method, route.Path, route.HandlerFunc, router.Flag(route.Handler))
+				}
 			}
+			isCollect = true
 		}
 		conn := websocketConnFunc(ctx)
 		// 设置变量到Context的key中，可以通过Get()取

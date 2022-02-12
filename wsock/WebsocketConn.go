@@ -2,7 +2,6 @@ package wsock
 
 import (
 	"bytes"
-	"fmt"
 	"gitee.com/dengpju/higo-code/code"
 	"github.com/dengpju/higo-logger/logger"
 	"github.com/dengpju/higo-router/router"
@@ -68,8 +67,6 @@ func (this *WebsocketConn) Conn() *websocket.Conn {
 }
 
 func (this *WebsocketConn) Close() {
-	this.lock.Lock()
-	defer this.lock.Unlock()
 	this.close()
 }
 
@@ -107,20 +104,16 @@ loop:
 	for {
 		select {
 		case msg := <-this.writeChan:
-			this.lock.Lock()
 			if WsResperror == msg.MessageType {
 				_ = this.conn.WriteMessage(websocket.TextMessage, msg.MessageData)
 				this.close()
-				this.lock.Unlock()
 				break loop
 			}
 			err := this.conn.WriteMessage(websocket.TextMessage, msg.MessageData)
 			if err != nil {
 				this.close()
-				this.lock.Unlock()
 				break loop
 			}
-			this.lock.Unlock()
 		}
 	}
 }
@@ -139,7 +132,6 @@ loop:
 			// 写数据
 			this.writeChan <- this.dispatch(msg)
 		case <-this.closeChan:
-			logger.Logrus.Info("websocket conn " + this.Conn().RemoteAddr().String() + " have already closed")
 			break loop
 		}
 	}
@@ -156,7 +148,6 @@ func (this *WebsocketConn) dispatch(msg *WsReadMessage) WsWriteMessage {
 	request.Header.Set("Content-Type", "application/json")
 	ctx.Request = request
 	handle.(gin.HandlerFunc)(ctx)
-	fmt.Println(111)
 	return <-this.dispatchChan
 }
 
@@ -174,14 +165,6 @@ func (this *WebsocketConn) WriteMap(message maputil.ArrayMap) {
 
 func (this *WebsocketConn) WriteStruct(message interface{}) {
 	go func(msg interface{}) {
-		//sleep := randomutil.Random().BetweenInt(1, 3)
-		//if sleep%2 == 0 {
-		//	time.Sleep(time.Second * time.Duration(sleep))
-		//	fmt.Print(this.ctx.Writer, "休眠", sleep)
-		//	fmt.Println()
-		//} else {
-		//	fmt.Println(this.ctx.Writer, "未休眠")
-		//}
 		this.dispatchChan <- WsRespStruct(msg)
 	}(message)
 }
@@ -229,9 +212,7 @@ func websocketConnFunc(ctx *gin.Context) string {
 }
 
 func wsPingFunc(websocketConn *WebsocketConn, waittime time.Duration) {
-	websocketConn.lock.Lock()
-	defer websocketConn.lock.Unlock()
-	time.Sleep(time.Second * 5)
+	time.Sleep(waittime)
 	err := websocketConn.conn.WriteMessage(websocket.TextMessage, []byte("ping"))
 	if err != nil {
 		WsContainer.Remove(websocketConn.conn)
@@ -240,8 +221,6 @@ func wsPingFunc(websocketConn *WebsocketConn, waittime time.Duration) {
 }
 
 func wsPongFunc(websocketConn *WebsocketConn, waittime time.Duration) {
-	websocketConn.lock.Lock()
-	defer websocketConn.lock.Unlock()
 	time.Sleep(waittime)
 	err := websocketConn.conn.WriteMessage(websocket.TextMessage, []byte("pong"))
 	if err != nil {
