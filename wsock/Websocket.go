@@ -104,15 +104,17 @@ func WsConnMiddleWare(engine *gin.Engine) gin.HandlerFunc {
 			isCollect = true
 		}
 
-		route := router.GetRoutes(WebsocketServe).Route(ctx.Request.Method, ctx.Request.URL.Path)
-
-		if route.IsWs() {
-			conn := websocketConnFunc(ctx)
-			// 设置变量到Context的key中，可以通过Get()取
-			ctx.Set(WsConnIp, conn)
-			// 终止执行
-			ctx.Abort()
+		if router.GetRoutes(WebsocketServe).Exist(ctx.Request.Method, ctx.Request.URL.Path) {
+			route := router.GetRoutes(WebsocketServe).Route(ctx.Request.Method, ctx.Request.URL.Path)
+			if route.IsWs() {
+				conn := websocketConnFunc(ctx)
+				// 设置变量到Context的key中，可以通过Get()取
+				ctx.Set(WsConnIp, conn)
+				// 终止执行
+				ctx.Abort()
+			}
 		}
+
 		ctx.Next()
 	}
 }
