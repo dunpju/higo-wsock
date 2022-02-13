@@ -13,6 +13,7 @@ import (
 func main() {
 	r := gin.Default()
 	r.Use(wsock.WsConnMiddleWare(r))
+	r.Static("/index", "./dist")
 	r.Handle("GET", "/conn", func(context *gin.Context) {
 		fmt.Println("hhh")
 		fmt.Println(context.Writer)

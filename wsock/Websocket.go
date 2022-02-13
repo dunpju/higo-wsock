@@ -5,6 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"net/http"
+	"regexp"
 	"sync"
 	"time"
 )
@@ -88,9 +89,16 @@ func WsConnMiddleWare(engine *gin.Engine) gin.HandlerFunc {
 			}
 		}()
 		if !isCollect {
+			reg , err := regexp.Compile(`.createStaticHandler.`)
+			if err != nil {
+				panic(err)
+			}
 			for _, route := range engine.Routes() {
-				if !router.GetRoutes(WebsocketServe).Exist(route.Method, route.Path) {
-					router.AddRoute(route.Method, route.Path, route.HandlerFunc, router.Flag(route.Handler))
+				if !reg.MatchString(route.Handler) {
+					if !router.GetRoutes(WebsocketServe).Exist(route.Method, route.Path) {
+						router.AddRoute(route.Method, route.Path, route.HandlerFunc, router.Flag(route.Handler),
+							router.IsWs(true))
+					}
 				}
 			}
 			isCollect = true
@@ -98,8 +106,12 @@ func WsConnMiddleWare(engine *gin.Engine) gin.HandlerFunc {
 		conn := websocketConnFunc(ctx)
 		// 设置变量到Context的key中，可以通过Get()取
 		ctx.Set(WsConnIp, conn)
+		route := router.GetRoutes(WebsocketServe).Route(ctx.Request.Method, ctx.Request.URL.Path)
 		// 终止执行
-		ctx.Abort()
+		if route.IsWs() {
+			ctx.Abort()
+		}
+		ctx.Next()
 	}
 }
 
