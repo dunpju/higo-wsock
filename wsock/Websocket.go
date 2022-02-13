@@ -103,12 +103,14 @@ func WsConnMiddleWare(engine *gin.Engine) gin.HandlerFunc {
 			}
 			isCollect = true
 		}
-		conn := websocketConnFunc(ctx)
-		// 设置变量到Context的key中，可以通过Get()取
-		ctx.Set(WsConnIp, conn)
+
 		route := router.GetRoutes(WebsocketServe).Route(ctx.Request.Method, ctx.Request.URL.Path)
-		// 终止执行
+
 		if route.IsWs() {
+			conn := websocketConnFunc(ctx)
+			// 设置变量到Context的key中，可以通过Get()取
+			ctx.Set(WsConnIp, conn)
+			// 终止执行
 			ctx.Abort()
 		}
 		ctx.Next()
