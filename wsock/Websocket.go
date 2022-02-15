@@ -79,10 +79,10 @@ func (this *WebsocketClient) Remove(conn *websocket.Conn) {
 	this.clients.Delete(conn.RemoteAddr().String())
 }
 
-func (this *WebsocketClient) Get(key string) (*WebsocketClient, bool) {
+func (this *WebsocketClient) Get(key string) (*WebsocketConn, bool) {
 	val, ok := this.clients.Load(key)
 	if ok {
-		return val.(*WebsocketClient), ok
+		return val.(*WebsocketConn), ok
 	}
 	return nil, ok
 }
@@ -97,7 +97,7 @@ func WsConnMiddleWare(engine *gin.Engine) gin.HandlerFunc {
 			}
 		}()
 		if !isCollect {
-			reg , err := regexp.Compile(`.createStaticHandler.`)
+			reg, err := regexp.Compile(`.createStaticHandler.`)
 			if err != nil {
 				panic(err)
 			}
