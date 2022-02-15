@@ -79,6 +79,14 @@ func (this *WebsocketClient) Remove(conn *websocket.Conn) {
 	this.clients.Delete(conn.RemoteAddr().String())
 }
 
+func (this *WebsocketClient) Get(key string) (*WebsocketClient, bool) {
+	val, ok := this.clients.Load(key)
+	if ok {
+		return val.(*WebsocketClient), ok
+	}
+	return nil, ok
+}
+
 //ws连接中间件
 func WsConnMiddleWare(engine *gin.Engine) gin.HandlerFunc {
 	router.AddServe(WebsocketServe)
