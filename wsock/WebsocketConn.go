@@ -53,13 +53,12 @@ type WebsocketConn struct {
 	conn         *websocket.Conn
 	readChan     chan *WsReadMessage
 	writeChan    chan WsWriteMessage
-	dispatchChan chan WsWriteMessage
 	closeChan    chan byte
 }
 
 func NewWebsocketConn(ctx *gin.Context, route *router.Route, conn *websocket.Conn) *WebsocketConn {
 	return &WebsocketConn{ctx: ctx, route: route, conn: conn, readChan: make(chan *WsReadMessage),
-		writeChan: make(chan WsWriteMessage), dispatchChan: make(chan WsWriteMessage), closeChan: make(chan byte)}
+		writeChan: make(chan WsWriteMessage), closeChan: make(chan byte)}
 }
 
 func (this *WebsocketConn) Conn() *websocket.Conn {
@@ -129,15 +128,15 @@ loop:
 	for {
 		select {
 		case msg := <-this.readChan:
-			// 写数据
-			this.writeChan <- this.dispatch(msg)
+			// 调度处理信息
+			this.dispatch(msg)
 		case <-this.closeChan:
 			break loop
 		}
 	}
 }
 
-func (this *WebsocketConn) dispatch(msg *WsReadMessage) WsWriteMessage {
+func (this *WebsocketConn) dispatch(msg *WsReadMessage) {
 	handle := this.route.Handle()
 	ctx := this.ctx
 	reader := bytes.NewReader(msg.MessageData)
@@ -148,36 +147,35 @@ func (this *WebsocketConn) dispatch(msg *WsReadMessage) WsWriteMessage {
 	request.Header.Set("Content-Type", "application/json")
 	ctx.Request = request
 	handle.(gin.HandlerFunc)(ctx)
-	return <-this.dispatchChan
 }
 
 func (this *WebsocketConn) WriteMessage(message string) {
 	go func(msg string) {
-		this.dispatchChan <- WsRespString(msg)
+		this.writeChan <- WsRespString(msg)
 	}(message)
 }
 
 func (this *WebsocketConn) WriteMap(message maputil.ArrayMap) {
 	go func(msg maputil.ArrayMap) {
-		this.dispatchChan <- WsRespMap(msg)
+		this.writeChan <- WsRespMap(msg)
 	}(message)
 }
 
 func (this *WebsocketConn) WriteStruct(message interface{}) {
 	go func(msg interface{}) {
-		this.dispatchChan <- WsRespStruct(msg)
+		this.writeChan <- WsRespStruct(msg)
 	}(message)
 }
 
 func (this *WebsocketConn) WriteError(message string) {
 	go func(msg string) {
-		this.dispatchChan <- WsRespError(msg)
+		this.writeChan <- WsRespError(msg)
 	}(message)
 }
 
 func (this *WebsocketConn) WriteClose() {
 	go func() {
-		this.dispatchChan <- WsRespClose()
+		this.writeChan <- WsRespClose()
 	}()
 }
 
