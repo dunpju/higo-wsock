@@ -2,6 +2,7 @@ package wsock
 
 import (
 	"bytes"
+	"fmt"
 	"gitee.com/dengpju/higo-code/code"
 	"github.com/dengpju/higo-logger/logger"
 	"github.com/dengpju/higo-router/router"
@@ -23,7 +24,7 @@ var (
 
 func init() {
 	wsRecoverOnce.Do(func() {
-		WsRecoverHandle = func(r interface{}) (respMsg string) {
+		WsRecoverHandle = func(conn *WebsocketConn, r interface{}) (respMsg string) {
 			if msg, ok := r.(*code.CodeMessage); ok {
 				respMsg = maputil.Array().
 					Put("code", msg.Code).
@@ -44,16 +45,16 @@ func init() {
 	})
 }
 
-type WsRecoverFunc func(r interface{}) string
+type WsRecoverFunc func(conn *WebsocketConn, r interface{}) string
 
 type WebsocketConn struct {
-	lock         sync.RWMutex
-	ctx          *gin.Context
-	route        *router.Route
-	conn         *websocket.Conn
-	readChan     chan *WsReadMessage
-	writeChan    chan WsWriteMessage
-	closeChan    chan byte
+	lock      sync.RWMutex
+	ctx       *gin.Context
+	route     *router.Route
+	conn      *websocket.Conn
+	readChan  chan *WsReadMessage
+	writeChan chan WsWriteMessage
+	closeChan chan byte
 }
 
 func NewWebsocketConn(ctx *gin.Context, route *router.Route, conn *websocket.Conn) *WebsocketConn {
@@ -121,7 +122,7 @@ func (this *WebsocketConn) handlerLoop() {
 	defer func() {
 		if r := recover(); r != nil {
 			logger.LoggerStack(r, runtimeutil.GoroutineID())
-			this.writeChan <- WsRespError(WsRecoverHandle(r))
+			this.writeChan <- WsRespError(WsRecoverHandle(this, r))
 		}
 	}()
 loop:
@@ -137,6 +138,11 @@ loop:
 }
 
 func (this *WebsocketConn) dispatch(msg *WsReadMessage) {
+	defer func() {
+		if r := recover(); r != nil {
+			panic(r)
+		}
+	}()
 	handle := this.route.Handle()
 	ctx := this.ctx
 	reader := bytes.NewReader(msg.MessageData)
@@ -186,12 +192,12 @@ func Response(ctx *gin.Context) *WebsocketConn {
 func conn(ctx *gin.Context) *WebsocketConn {
 	client, ok := ctx.Get(WsConnIp)
 	if !ok {
-		panic("websocket conn client non-existent")
+		panic(fmt.Errorf("websocket conn client non-existent"))
 	}
 	if conn, ok := WsContainer.clients.Load(client); ok {
 		return conn.(*WebsocketConn)
 	} else {
-		panic("websocket conn non-existent")
+		panic(fmt.Errorf("websocket conn non-existent"))
 	}
 }
 

@@ -1,6 +1,7 @@
 package wsock
 
 import (
+	"fmt"
 	"github.com/dengpju/higo-router/router"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -132,7 +133,7 @@ func WsUpgraderHandle() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		_, ok := ctx.Get(WsConnIp)
 		if !ok {
-			panic("websocket conn ip non-existent")
+			panic(fmt.Errorf("websocket conn ip non-existent"))
 		}
 	}
 }
