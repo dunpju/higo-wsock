@@ -105,8 +105,11 @@ func WsConnMiddleWare(engine *gin.Engine) gin.HandlerFunc {
 			for _, route := range engine.Routes() {
 				if !reg.MatchString(route.Handler) {
 					if !router.GetRoutes(WebsocketServe).Exist(route.Method, route.Path) {
-						router.AddRoute(route.Method, route.Path, route.HandlerFunc, router.Flag(route.Handler),
-							router.IsWs(true))
+						_, ok := requireUpgrade.Load(route.Method, route.Path)
+						if ok {
+							router.AddRoute(route.Method, route.Path, route.HandlerFunc, router.Flag(route.Handler),
+								router.IsWs(true))
+						}
 					}
 				}
 			}
@@ -116,7 +119,7 @@ func WsConnMiddleWare(engine *gin.Engine) gin.HandlerFunc {
 		if router.GetRoutes(WebsocketServe).Exist(ctx.Request.Method, ctx.Request.URL.Path) {
 			route := router.GetRoutes(WebsocketServe).Route(ctx.Request.Method, ctx.Request.URL.Path)
 			if route.IsWs() {
-				conn := websocketConnFunc(ctx)
+				conn := upgraderConnFunc(ctx)
 				// 设置变量到Context的key中，可以通过Get()取
 				ctx.Set(WsConnIp, conn)
 				// 终止执行

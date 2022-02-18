@@ -202,7 +202,7 @@ func conn(ctx *gin.Context) *WebsocketConn {
 }
 
 //webSocket请求连接
-func websocketConnFunc(ctx *gin.Context) string {
+func upgraderConnFunc(ctx *gin.Context) string {
 	//升级get请求为webSocket协议
 	client, err := Upgrader.Upgrade(ctx.Writer, ctx.Request, nil)
 	if err != nil {

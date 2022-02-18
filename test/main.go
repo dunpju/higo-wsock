@@ -13,8 +13,20 @@ import (
 func main() {
 	r := gin.Default()
 	r.Use(wsock.WsConnMiddleWare(r))
+	r.Use(func(context *gin.Context) {
+		context.Next()
+	})
 	r.Static("/index", "./dist")
-	r.Handle("GET", "/conn", func(context *gin.Context) {
+	g1 := r.Group("/g1", func(context *gin.Context) {
+		context.Next()
+	})
+	g2 := g1.Group("/g2", func(context *gin.Context) {
+		context.Next()
+	})
+	g3 := g2.Group("/g3", func(context *gin.Context) {
+		context.Next()
+	})
+	g3.Handle("GET", "/conn", func(context *gin.Context) {
 		fmt.Println("hhh")
 		fmt.Println(context.Writer)
 		loginEntity := NewLoginEntity()
