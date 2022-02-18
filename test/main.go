@@ -11,27 +11,25 @@ import (
 
 //jmeter 压测 https://www.bbsmax.com/A/8Bz8jog15x/
 func main() {
-	r := gin.Default()
-	r.Use(wsock.ConnUpgrader(r))
-	r.Use(wsock.Use(func(context *gin.Context) {
+	r := wsock.Default()
+	r.Gin.Static("/index", "./dist")
+	r.Use(wsock.ConnUpgrader(r.Gin))
+	r.Use(func(context *gin.Context) {
 		context.Next()
-	}))
-	r.Static("/index", "./dist")
+	})
 	g1 := r.Group("/g1", func(context *gin.Context) {
 		fmt.Println("g1")
 		context.Next()
 	})
-	relativePath, handlers := wsock.Group("/g2", func(context *gin.Context) {
+	g2 := g1.Group("/g2", func(context *gin.Context) {
 		fmt.Println("g2-1")
 		context.Next()
 	}, func(context *gin.Context) {
 		fmt.Println("g2-2")
 		context.Next()
 	})
-	g2 := g1.Group(relativePath, handlers...)
 	_ = g2.Group("/g3", func(context *gin.Context) {
 		fmt.Println("g3")
-		fmt.Println(r.Handlers)
 		context.Next()
 	})
 	g2.Handle("GET", "/conn", func(context *gin.Context) {
