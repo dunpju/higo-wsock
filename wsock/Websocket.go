@@ -6,9 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"net/http"
-	"reflect"
 	"regexp"
-	"runtime"
 	"sync"
 	"time"
 )
@@ -90,8 +88,8 @@ func (this *WebsocketClient) Get(key string) (*WebsocketConn, bool) {
 	return nil, ok
 }
 
-//ws连接中间件
-func WsConnMiddleWare(engine *gin.Engine) gin.HandlerFunc {
+//连接升级
+func ConnUpgrader(engine *gin.Engine) gin.HandlerFunc {
 	router.AddServe(WebsocketServe)
 	return func(ctx *gin.Context) {
 		defer func() {
@@ -99,24 +97,20 @@ func WsConnMiddleWare(engine *gin.Engine) gin.HandlerFunc {
 				panic(r)
 			}
 		}()
-		fmt.Println("WsConnMiddleWare")
-		fmt.Println(ctx.HandlerNames())
+fmt.Println(ctx)
 		if !isCollect {
 			reg, err := regexp.Compile(`.createStaticHandler.`)
 			if err != nil {
 				panic(err)
 			}
-			fmt.Println(engine.Handlers)
-			for _, handler := range engine.Handlers {
-				fmt.Println(runtime.FuncForPC(reflect.ValueOf(handler).Pointer()).Name())
-			}
+
 			for _, route := range engine.Routes() {
 				if !reg.MatchString(route.Handler) {
 					if !router.GetRoutes(WebsocketServe).Exist(route.Method, route.Path) {
 						_, ok := requireUpgrade.Load(route.Method, route.Path)
 						if ok {
 							router.AddRoute(route.Method, route.Path, route.HandlerFunc, router.Flag(route.Handler),
-								router.IsWs(true), router.Middleware())
+								router.IsWs(true))
 						}
 					}
 				}
