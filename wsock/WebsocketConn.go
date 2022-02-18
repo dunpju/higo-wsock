@@ -49,7 +49,7 @@ type WsRecoverFunc func(conn *WebsocketConn, r interface{}) string
 
 type WebsocketConn struct {
 	lock      sync.RWMutex
-	ctx       *gin.Context
+	context   *gin.Context
 	route     *router.Route
 	conn      *websocket.Conn
 	readChan  chan *WsReadMessage
@@ -58,7 +58,7 @@ type WebsocketConn struct {
 }
 
 func NewWebsocketConn(ctx *gin.Context, route *router.Route, conn *websocket.Conn) *WebsocketConn {
-	return &WebsocketConn{ctx: ctx, route: route, conn: conn, readChan: make(chan *WsReadMessage),
+	return &WebsocketConn{context: ctx, route: route, conn: conn, readChan: make(chan *WsReadMessage),
 		writeChan: make(chan WsWriteMessage), closeChan: make(chan byte)}
 }
 
@@ -144,7 +144,7 @@ func (this *WebsocketConn) dispatch(msg *WsReadMessage) {
 		}
 	}()
 	handle := this.route.Handle()
-	ctx := this.ctx
+	ctx := this.context
 	reader := bytes.NewReader(msg.MessageData)
 	request, err := http.NewRequest(router.POST, this.route.AbsolutePath(), reader)
 	if err != nil {

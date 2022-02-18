@@ -14,21 +14,27 @@ func main() {
 	r := gin.Default()
 	r.Use(wsock.WsConnMiddleWare(r))
 	r.Use(func(context *gin.Context) {
+		fmt.Println("Use")
 		context.Next()
 	})
 	r.Static("/index", "./dist")
 	g1 := r.Group("/g1", func(context *gin.Context) {
+		fmt.Println("g1")
 		context.Next()
 	})
 	g2 := g1.Group("/g2", func(context *gin.Context) {
+		fmt.Println("g2")
 		context.Next()
 	})
-	g3 := g2.Group("/g3", func(context *gin.Context) {
+	_ = g2.Group("/g3", func(context *gin.Context) {
+		fmt.Println("g3")
+		fmt.Println(r.Handlers)
 		context.Next()
 	})
-	g3.Handle("GET", "/conn", func(context *gin.Context) {
-		fmt.Println("hhh")
+	g1.Handle("GET", "/conn", func(context *gin.Context) {
+		fmt.Println("conn")
 		fmt.Println(context.Writer)
+		return
 		loginEntity := NewLoginEntity()
 		err := context.ShouldBind(loginEntity)
 		if err != nil {
