@@ -28,11 +28,11 @@ func main() {
 		fmt.Println("g2-2")
 		context.Next()
 	})
-	_ = g2.Group("/g3", func(context *gin.Context) {
+	g3 := g2.Group("/g3", func(context *gin.Context) {
 		fmt.Println("g3")
 		context.Next()
 	})
-	g2.Handle("GET", "/conn", func(context *gin.Context) {
+	g3.Handle("GET", "/conn", func(context *gin.Context) {
 		fmt.Println("conn")
 		fmt.Println(context.Writer)
 		return

@@ -1,9 +1,10 @@
 package wsock
 
 import (
-	"fmt"
+	"github.com/dengpju/higo-router/router"
 	"github.com/gin-gonic/gin"
 	"reflect"
+	"regexp"
 	"runtime"
 )
 
@@ -34,7 +35,7 @@ func (this *Engine) Run(addr ...string) (err error) {
 }
 
 func (this *Engine) Use(handlerFunc gin.HandlerFunc) *Engine {
-	fmt.Println(runtime.FuncForPC(reflect.ValueOf(handlerFunc).Pointer()).Name())
+	//fmt.Println(runtime.FuncForPC(reflect.ValueOf(handlerFunc).Pointer()).Name())
 	this.gin.Use(handlerFunc)
 	return this
 }
@@ -52,6 +53,32 @@ func (this *RouterGroup) Group(relativePath string, handlers ...gin.HandlerFunc)
 }
 
 func (this *RouterGroup) Handle(httpMethod, relativePath string, handlers ...gin.HandlerFunc) *RouterGroup {
+	groupHandlers := make([]interface{}, 0)
+	for _, Handler := range this.group.Handlers {
+		handlerName := runtime.FuncForPC(reflect.ValueOf(Handler).Pointer()).Name()
+		b0, err := regexp.MatchString(`^github\.com\/gin\-gonic\/gin\.LoggerWithConfig\.`, handlerName)
+		if err != nil {
+			panic(err)
+		}
+		b1, err := regexp.MatchString(`github\.com\/gin\-gonic\/gin\.CustomRecoveryWithWriter\.`, handlerName)
+		if err != nil {
+			panic(err)
+		}
+		b2, err := regexp.MatchString(`github\.com\/dengpju\/higo\-wsock\/wsock\.ConnUpgrader\.`, handlerName)
+		if err != nil {
+			panic(err)
+		}
+		if !b0 && !b1 && !b2 {
+			//fmt.Println(runtime.FuncForPC(reflect.ValueOf(Handler).Pointer()).Name())
+			groupHandlers = append(groupHandlers, Handler)
+		}
+	}
+	path := this.group.BasePath() + "/" + relativePath
+	_, ok := requireUpgrade.Load(httpMethod, path)
+	if ok {
+		router.AddRoute(httpMethod, path, handlers, router.Flag(router.Unique(httpMethod, path)),
+			router.IsWs(true), router.Middleware(groupHandlers...))
+	}
 	this.group.Handle(httpMethod, relativePath, handlers...)
 	return this
 }
