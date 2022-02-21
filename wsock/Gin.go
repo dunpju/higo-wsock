@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"regexp"
 	"runtime"
+	"strings"
 )
 
 func Default() *Engine {
@@ -57,7 +58,7 @@ func (this *RouterGroup) Handle(httpMethod, relativePath string, handlers ...gin
 	return this
 }
 
-func (this *RouterGroup) Upgrade(httpMethod, relativePath string, handlers ...gin.HandlerFunc) *RouterGroup {
+func (this *RouterGroup) Upgrade(httpMethod, relativePath string, handle gin.HandlerFunc, attributes ...*router.RouteAttribute) *RouterGroup {
 	groupHandlers := make([]interface{}, 0)
 	for _, handler := range this.group.Handlers {
 		handlerName := runtime.FuncForPC(reflect.ValueOf(handler).Pointer()).Name()
@@ -77,17 +78,15 @@ func (this *RouterGroup) Upgrade(httpMethod, relativePath string, handlers ...gi
 			groupHandlers = append(groupHandlers, handler)
 		}
 	}
-	var lastHandler interface{}
-	if len(handlers) > 0 {
-		for _, handler := range handlers[:len(handlers)-1] {
-			groupHandlers = append(groupHandlers, handler)
-		}
-		lastHandler = handler(handlers[len(handlers)-1])
-		handlers[len(handlers)-1] = lastHandler.(gin.HandlerFunc)
-	}
 	path := this.group.BasePath() + relativePath
-	router.AddRoute(httpMethod, path, lastHandler, router.Flag(router.Unique(httpMethod, path)),
-		router.IsWs(true), router.Middleware(groupHandlers...))
-	this.group.Handle(httpMethod, relativePath, handlers...)
+	path = "/" + strings.TrimLeft(path, "/")
+	abs := make([]*router.RouteAttribute, 0)
+	abs = append(abs, router.Flag(router.Unique(httpMethod, path)), router.IsWs(true))
+	abs = append(abs, attributes...)
+	if len(groupHandlers) > 0 {
+		abs = append(abs, router.Middleware(groupHandlers...))
+	}
+	router.AddRoute(httpMethod, path, handler(handle), abs...)
+	this.group.Handle(httpMethod, relativePath, handler(handle))
 	return this
 }

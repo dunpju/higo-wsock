@@ -108,6 +108,8 @@ func ConnUpgrader() gin.HandlerFunc {
 				panic(r)
 			}
 		}()
+		fmt.Println(router.GetRoutes(Serve()).Exist(ctx.Request.Method, ctx.Request.URL.Path),
+			ctx.Request.Method, ctx.Request.URL.Path)
 		if router.GetRoutes(Serve()).Exist(ctx.Request.Method, ctx.Request.URL.Path) {
 			route := router.GetRoutes(Serve()).Route(ctx.Request.Method, ctx.Request.URL.Path)
 			if route.IsWs() {
@@ -116,6 +118,7 @@ func ConnUpgrader() gin.HandlerFunc {
 				return
 			}
 		}
+		fmt.Println("ConnUpgrader")
 		ctx.Next()
 	}
 }
