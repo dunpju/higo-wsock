@@ -7,25 +7,29 @@ import (
 	"runtime"
 )
 
-type Engine struct {
-	Gin *gin.Engine
-}
-
 func Default() *Engine {
-	return &Engine{Gin: gin.Default()}
+	return &Engine{gin: gin.Default()}
 }
 
 func Gin(engine *gin.Engine) *Engine {
-	return &Engine{Gin: engine}
+	return &Engine{gin: engine}
+}
+
+type Engine struct {
+	gin *gin.Engine
+}
+
+func (this *Engine) Gin() *gin.Engine {
+	return this.gin
 }
 
 func (this *Engine) Run(addr ...string) (err error) {
-	return this.Gin.Run(addr...)
+	return this.gin.Run(addr...)
 }
 
 func (this *Engine) Use(handlerFunc gin.HandlerFunc) *Engine {
 	fmt.Println(runtime.FuncForPC(reflect.ValueOf(handlerFunc).Pointer()).Name())
-	this.Gin.Use(handlerFunc)
+	this.gin.Use(handlerFunc)
 	return this
 }
 
@@ -33,24 +37,23 @@ func (this *Engine) Group(relativePath string, handlers ...gin.HandlerFunc) *Rou
 	for _, handler := range handlers {
 		fmt.Println(runtime.FuncForPC(reflect.ValueOf(handler).Pointer()).Name())
 	}
-	return &RouterGroup{GinGroup: this.Gin.Group(relativePath, handlers...)}
+	return &RouterGroup{group: this.gin.Group(relativePath, handlers...)}
 }
 
 func (this *Engine) Handle(httpMethod, relativePath string, handlers ...gin.HandlerFunc) *Engine {
-	this.Gin.Handle(httpMethod, relativePath, handlers...)
+	this.gin.Handle(httpMethod, relativePath, handlers...)
 	return this
 }
 
 type RouterGroup struct {
-	GinGroup *gin.RouterGroup
+	group *gin.RouterGroup
 }
 
 func (this *RouterGroup) Group(relativePath string, handlers ...gin.HandlerFunc) *RouterGroup {
-	this.GinGroup.Group(relativePath, handlers...)
-	return this
+	return &RouterGroup{group: this.group.Group(relativePath, handlers...)}
 }
 
 func (this *RouterGroup) Handle(httpMethod, relativePath string, handlers ...gin.HandlerFunc) *RouterGroup {
-	this.GinGroup.Handle(httpMethod, relativePath, handlers...)
+	this.group.Handle(httpMethod, relativePath, handlers...)
 	return this
 }
