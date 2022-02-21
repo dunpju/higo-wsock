@@ -41,7 +41,7 @@ func init() {
 	WsPingHandle = wsPingFunc
 	WsPongHandle = wsPongFunc
 	WsContainer = NewWebsocketClient()
-	WsPitpatSleep = time.Second * 5
+	WsPitpatSleep = time.Second * 30
 }
 
 func SetServe(ser string) {

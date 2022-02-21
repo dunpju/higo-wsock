@@ -74,7 +74,6 @@ func (this *RouterGroup) Upgrade(httpMethod, relativePath string, handlers ...gi
 			panic(err)
 		}
 		if !b0 && !b1 && !b2 {
-			//fmt.Println(runtime.FuncForPC(reflect.ValueOf(Handler).Pointer()).Name())
 			groupHandlers = append(groupHandlers, handler)
 		}
 	}

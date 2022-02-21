@@ -14,6 +14,7 @@ func main() {
 	r.Use(wsock.ConnUpgrader())
 	r.Use(func(context *gin.Context) {
 		fmt.Println("use1")
+		fmt.Println(context.Request.URL.RawQuery)
 		context.Next()
 	})
 	g1 := r.Group("/g1", func(context *gin.Context) {
@@ -39,7 +40,7 @@ func main() {
 	})
 	g2.Upgrade("GET", "/conn", func(context *gin.Context) {
 		fmt.Println("conn1")
-		wsock.Response(context).WriteMessage("11")
+		//wsock.Response(context).WriteMessage("11")
 	}, func(context *gin.Context) {
 		fmt.Println("conn2")
 		fmt.Println(context.Writer)

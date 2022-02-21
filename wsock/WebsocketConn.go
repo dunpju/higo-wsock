@@ -131,7 +131,6 @@ loop:
 	for {
 		select {
 		case msg := <-this.readChan:
-			// 调度处理信息
 			this.dispatch(msg)
 		case <-this.closeChan:
 			break loop
@@ -159,6 +158,8 @@ func (this *WebsocketConn) dispatch(msg *WsReadMessage) {
 		panic(err)
 	}
 	request.Header.Set("Content-Type", "application/json")
+	request.RemoteAddr = this.context.Request.RemoteAddr
+	request.URL.RawQuery = this.context.Request.URL.Query().Encode()
 	ctx.Request = request
 	handlers := this.route.Middleware()
 	handlers = append(handlers.([]interface{}), this.route.Handle())
