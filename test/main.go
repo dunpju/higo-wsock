@@ -2,8 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/dengpju/higo-utils/utils/randomutil"
-	"github.com/dengpju/higo-utils/utils/stringutil"
 	"github.com/dengpju/higo-wsock/wsock"
 	"github.com/gin-gonic/gin"
 	"log"
@@ -41,21 +39,17 @@ func main() {
 	})
 	g2.Upgrade("GET", "/conn", func(context *gin.Context) {
 		fmt.Println("conn1")
+		wsock.Response(context).WriteMessage("11")
+	}, func(context *gin.Context) {
+		fmt.Println("conn2")
 		fmt.Println(context.Writer)
-		//context.Abort()
-		return
 		loginEntity := NewLoginEntity()
 		err := context.ShouldBind(loginEntity)
 		if err != nil {
 			panic(err)
 		}
 		fmt.Println("Conn", loginEntity)
-		ran := randomutil.Random().Int(1000)
-		loginEntity.Time = loginEntity.Time + stringutil.IntString(ran)
 		wsock.Response(context).WriteStruct(loginEntity)
-	}, func(context *gin.Context) {
-		fmt.Println("conn2")
-		wsock.Response(context).WriteMessage("11")
 	})
 	err := r.Run(":8080")
 	if err != nil {
@@ -64,10 +58,8 @@ func main() {
 }
 
 type LoginEntity struct {
-	UserName    string `json:"username" binding:"required"`
-	Password    string `json:"password" binding:"required"`
-	CaptchaCode string `json:"captcha_code" binding:"required"`
-	Time        string `json:"time" binding:"required"`
+	UserName string `json:"username" binding:"required"`
+	Password string `json:"password" binding:"required"`
 }
 
 func NewLoginEntity() *LoginEntity {

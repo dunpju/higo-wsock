@@ -56,6 +56,7 @@ type WebsocketConn struct {
 	readChan  chan *WsReadMessage
 	writeChan chan WsWriteMessage
 	closeChan chan byte
+	isAborted bool
 }
 
 func NewWebsocketConn(ctx *gin.Context, route *router.Route, conn *websocket.Conn) *WebsocketConn {
@@ -160,18 +161,16 @@ func (this *WebsocketConn) dispatch(msg *WsReadMessage) {
 	request.Header.Set("Content-Type", "application/json")
 	ctx.Request = request
 	handlers := this.route.Middleware()
-	isAborted := false
+	handlers = append(handlers.([]interface{}), this.route.Handle())
+	this.isAborted = false
 	for _, handler := range handlers.([]interface{}) {
-		if isAborted {
-			break
-		}
 		if handle, ok := handler.(gin.HandlerFunc); ok {
 			handle(ctx)
-			isAborted = ctx.IsAborted()
+			if this.isAborted {
+				break
+			}
+			this.isAborted = ctx.IsAborted()
 		}
-	}
-	if !isAborted {
-		this.route.Handle().(gin.HandlerFunc)(ctx)
 	}
 }
 
@@ -206,7 +205,9 @@ func (this *WebsocketConn) WriteClose() {
 }
 
 func Response(ctx *gin.Context) *WebsocketConn {
-	return conn(ctx)
+	conn := conn(ctx)
+	conn.isAborted = true
+	return conn
 }
 
 func conn(ctx *gin.Context) *WebsocketConn {
@@ -227,9 +228,7 @@ func upgrader(ctx *gin.Context) string {
 	if err != nil {
 		panic(err)
 	}
-
 	route := router.GetRoutes(Serve()).Route(ctx.Request.Method, ctx.Request.URL.Path).SetHeader(ctx.Request.Header)
-
 	WsContainer.Store(ctx, route, client)
 	return client.RemoteAddr().String()
 }
