@@ -15,6 +15,7 @@ func main() {
 	r.Gin().Static("/index", "./dist")
 	r.Use(wsock.ConnUpgrader())
 	r.Use(func(context *gin.Context) {
+		fmt.Println("use1")
 		context.Next()
 	})
 	g1 := r.Group("/g1", func(context *gin.Context) {
@@ -54,6 +55,7 @@ func main() {
 		wsock.Response(context).WriteStruct(loginEntity)
 	}, func(context *gin.Context) {
 		fmt.Println("conn2")
+		wsock.Response(context).WriteMessage("11")
 	})
 	err := r.Run(":8080")
 	if err != nil {

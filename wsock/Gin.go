@@ -83,7 +83,7 @@ func (this *RouterGroup) Upgrade(httpMethod, relativePath string, handlers ...gi
 		for _, handler := range handlers[:len(handlers)-1] {
 			groupHandlers = append(groupHandlers, handler)
 		}
-		lastHandler = handle(handlers[len(handlers)-1])
+		lastHandler = handler(handlers[len(handlers)-1])
 		handlers[len(handlers)-1] = lastHandler.(gin.HandlerFunc)
 	}
 	path := this.group.BasePath() + relativePath

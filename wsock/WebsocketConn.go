@@ -11,8 +11,8 @@ import (
 	"github.com/dengpju/higo-utils/utils/runtimeutil"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-	"math"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 )
@@ -138,15 +138,19 @@ loop:
 	}
 }
 
-const abortIndex = math.MaxInt8 / 2
-
 func (this *WebsocketConn) dispatch(msg *WsReadMessage) {
 	defer func() {
 		if r := recover(); r != nil {
 			panic(r)
 		}
 	}()
-	ctx := this.context.Copy()
+	conn, ok := this.context.Get(WsConnIp)
+	if !ok {
+		panic(fmt.Errorf("websocket conn client non-existent"))
+	}
+	ctx := &gin.Context{Request: &http.Request{PostForm: make(url.Values)}}
+	ctx.Writer = this.context.Writer
+	ctx.Set(WsConnIp, conn)
 	ctx.Set(WsRequest, WsRequest)
 	reader := bytes.NewReader(msg.MessageData)
 	request, err := http.NewRequest(router.POST, this.route.AbsolutePath(), reader)
@@ -156,14 +160,19 @@ func (this *WebsocketConn) dispatch(msg *WsReadMessage) {
 	request.Header.Set("Content-Type", "application/json")
 	ctx.Request = request
 	handlers := this.route.Middleware()
-	fmt.Println(abortIndex)
+	isAborted := false
 	for _, handler := range handlers.([]interface{}) {
+		if isAborted {
+			break
+		}
 		if handle, ok := handler.(gin.HandlerFunc); ok {
 			handle(ctx)
-			fmt.Println(ctx.IsAborted())
+			isAborted = ctx.IsAborted()
 		}
 	}
-	this.route.Handle().(gin.HandlerFunc)(ctx)
+	if !isAborted {
+		this.route.Handle().(gin.HandlerFunc)(ctx)
+	}
 }
 
 func (this *WebsocketConn) WriteMessage(message string) {
@@ -212,15 +221,14 @@ func conn(ctx *gin.Context) *WebsocketConn {
 	}
 }
 
-//webSocket请求连接
-func upgraderConnFunc(ctx *gin.Context) string {
-	//升级get请求为webSocket协议
+// 升级
+func upgrader(ctx *gin.Context) string {
 	client, err := Upgrader.Upgrade(ctx.Writer, ctx.Request, nil)
 	if err != nil {
 		panic(err)
 	}
 
-	route := router.GetRoutes(WebsocketServe).Route(ctx.Request.Method, ctx.Request.URL.Path).SetHeader(ctx.Request.Header)
+	route := router.GetRoutes(Serve()).Route(ctx.Request.Method, ctx.Request.URL.Path).SetHeader(ctx.Request.Header)
 
 	WsContainer.Store(ctx, route, client)
 	return client.RemoteAddr().String()

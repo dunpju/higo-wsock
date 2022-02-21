@@ -22,7 +22,7 @@ const (
 )
 
 var (
-	isCollect     bool
+	serve         string
 	Upgrader      websocket.Upgrader
 	WsPingHandle  WebsocketPingFunc
 	WsPongHandle  WebsocketPingFunc
@@ -42,6 +42,17 @@ func init() {
 	WsPongHandle = wsPongFunc
 	WsContainer = NewWebsocketClient()
 	WsPitpatSleep = time.Second * 5
+}
+
+func SetServe(ser string) {
+	serve = ser
+}
+
+func Serve() string {
+	if serve != "" {
+		return serve
+	}
+	return WebsocketServe
 }
 
 type WebsocketCheckFunc func(r *http.Request) bool
@@ -90,32 +101,26 @@ func (this *WebsocketClient) Get(key string) (*WebsocketConn, bool) {
 
 //连接升级
 func ConnUpgrader() gin.HandlerFunc {
-	router.AddServe(WebsocketServe)
+	router.AddServe(Serve())
 	return func(ctx *gin.Context) {
 		defer func() {
 			if r := recover(); r != nil {
 				panic(r)
 			}
 		}()
-		fmt.Println(ctx.IsAborted())
-		if router.GetRoutes(WebsocketServe).Exist(ctx.Request.Method, ctx.Request.URL.Path) {
-			route := router.GetRoutes(WebsocketServe).Route(ctx.Request.Method, ctx.Request.URL.Path)
+		if router.GetRoutes(Serve()).Exist(ctx.Request.Method, ctx.Request.URL.Path) {
+			route := router.GetRoutes(Serve()).Route(ctx.Request.Method, ctx.Request.URL.Path)
 			if route.IsWs() {
-				// 升级鉴权
-				// 升级
-				conn := upgraderConnFunc(ctx)
-				// 设置变量到Context的key中，可以通过Get()取
+				conn := upgrader(ctx)
 				ctx.Set(WsConnIp, conn)
-			} else {
-				ctx.Next()
+				return
 			}
-		} else {
-			ctx.Next()
 		}
+		ctx.Next()
 	}
 }
 
-func handle(handlerFunc gin.HandlerFunc) gin.HandlerFunc {
+func handler(handlerFunc gin.HandlerFunc) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		_, ok := ctx.Get(WsRequest)
 		if !ok {
