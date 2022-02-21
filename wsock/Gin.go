@@ -44,7 +44,7 @@ type RouterGroup struct {
 	group *gin.RouterGroup
 }
 
-func (this *RouterGroup) GinGroup() *gin.RouterGroup {
+func (this *RouterGroup) Gin() *gin.RouterGroup {
 	return this.group
 }
 
@@ -53,6 +53,11 @@ func (this *RouterGroup) Group(relativePath string, handlers ...gin.HandlerFunc)
 }
 
 func (this *RouterGroup) Handle(httpMethod, relativePath string, handlers ...gin.HandlerFunc) *RouterGroup {
+	this.group.Handle(httpMethod, relativePath, handlers...)
+	return this
+}
+
+func (this *RouterGroup) Upgrade(httpMethod, relativePath string, handlers ...gin.HandlerFunc) *RouterGroup {
 	groupHandlers := make([]interface{}, 0)
 	for _, Handler := range this.group.Handlers {
 		handlerName := runtime.FuncForPC(reflect.ValueOf(Handler).Pointer()).Name()
@@ -73,12 +78,16 @@ func (this *RouterGroup) Handle(httpMethod, relativePath string, handlers ...gin
 			groupHandlers = append(groupHandlers, Handler)
 		}
 	}
-	path := this.group.BasePath() + "/" + relativePath
-	_, ok := requireUpgrade.Load(httpMethod, path)
-	if ok {
-		router.AddRoute(httpMethod, path, handlers, router.Flag(router.Unique(httpMethod, path)),
-			router.IsWs(true), router.Middleware(groupHandlers...))
+	var lastHandler interface{}
+	if len(handlers) > 0 {
+		for _, handler := range handlers[:len(handlers)-1] {
+			groupHandlers = append(groupHandlers, handler)
+		}
+		lastHandler = handlers[len(handlers)-1]
 	}
+	path := this.group.BasePath() + relativePath
+	router.AddRoute(httpMethod, path, lastHandler, router.Flag(router.Unique(httpMethod, path)),
+		router.IsWs(true), router.Middleware(groupHandlers...))
 	this.group.Handle(httpMethod, relativePath, handlers...)
 	return this
 }

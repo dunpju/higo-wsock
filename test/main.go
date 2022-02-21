@@ -13,7 +13,7 @@ import (
 func main() {
 	r := wsock.Default()
 	r.Gin().Static("/index", "./dist")
-	r.Use(wsock.ConnUpgrader(r.Gin()))
+	r.Use(wsock.ConnUpgrader())
 	r.Use(func(context *gin.Context) {
 		context.Next()
 	})
@@ -32,7 +32,13 @@ func main() {
 		fmt.Println("g3")
 		context.Next()
 	})
-	g3.Handle("GET", "/conn", func(context *gin.Context) {
+	g3.Handle("GET", "/test", func(context *gin.Context) {
+		fmt.Println("test1")
+		context.Next()
+	}, func(context *gin.Context) {
+		fmt.Println("test2")
+	})
+	g2.Upgrade("GET", "/conn", func(context *gin.Context) {
 		fmt.Println("conn")
 		fmt.Println(context.Writer)
 		return

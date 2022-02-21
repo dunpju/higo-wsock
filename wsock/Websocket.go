@@ -1,12 +1,10 @@
 package wsock
 
 import (
-	"fmt"
 	"github.com/dengpju/higo-router/router"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"net/http"
-	"regexp"
 	"sync"
 	"time"
 )
@@ -89,7 +87,7 @@ func (this *WebsocketClient) Get(key string) (*WebsocketConn, bool) {
 }
 
 //连接升级
-func ConnUpgrader(engine *gin.Engine) gin.HandlerFunc {
+func ConnUpgrader() gin.HandlerFunc {
 	router.AddServe(WebsocketServe)
 	return func(ctx *gin.Context) {
 		defer func() {
@@ -97,26 +95,6 @@ func ConnUpgrader(engine *gin.Engine) gin.HandlerFunc {
 				panic(r)
 			}
 		}()
-fmt.Println(ctx)
-		if !isCollect {
-			reg, err := regexp.Compile(`.createStaticHandler.`)
-			if err != nil {
-				panic(err)
-			}
-
-			for _, route := range engine.Routes() {
-				if !reg.MatchString(route.Handler) {
-					if !router.GetRoutes(WebsocketServe).Exist(route.Method, route.Path) {
-						_, ok := requireUpgrade.Load(route.Method, route.Path)
-						if ok {
-							router.AddRoute(route.Method, route.Path, route.HandlerFunc, router.Flag(route.Handler),
-								router.IsWs(true))
-						}
-					}
-				}
-			}
-			isCollect = true
-		}
 
 		if router.GetRoutes(WebsocketServe).Exist(ctx.Request.Method, ctx.Request.URL.Path) {
 			route := router.GetRoutes(WebsocketServe).Route(ctx.Request.Method, ctx.Request.URL.Path)
@@ -130,15 +108,5 @@ fmt.Println(ctx)
 		}
 
 		ctx.Next()
-	}
-}
-
-// 连接升级协议handle
-func WsUpgraderHandle() gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		_, ok := ctx.Get(WsConnIp)
-		if !ok {
-			panic(fmt.Errorf("websocket conn ip non-existent"))
-		}
 	}
 }
