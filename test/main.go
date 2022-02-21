@@ -14,7 +14,7 @@ func main() {
 	r.Use(wsock.ConnUpgrader())
 	r.Use(func(context *gin.Context) {
 		fmt.Println("use1")
-		fmt.Println(context.Request.URL.RawQuery)
+		fmt.Println(context.Request.URL.Query().Get("token"))
 		context.Next()
 	})
 	g1 := r.Group("/g1", func(context *gin.Context) {
