@@ -39,8 +39,9 @@ func main() {
 		fmt.Println("test2")
 	})
 	g2.Upgrade("GET", "/conn", func(context *gin.Context) {
-		fmt.Println("conn")
+		fmt.Println("conn1")
 		fmt.Println(context.Writer)
+		//context.Abort()
 		return
 		loginEntity := NewLoginEntity()
 		err := context.ShouldBind(loginEntity)
@@ -51,6 +52,8 @@ func main() {
 		ran := randomutil.Random().Int(1000)
 		loginEntity.Time = loginEntity.Time + stringutil.IntString(ran)
 		wsock.Response(context).WriteStruct(loginEntity)
+	}, func(context *gin.Context) {
+		fmt.Println("conn2")
 	})
 	err := r.Run(":8080")
 	if err != nil {

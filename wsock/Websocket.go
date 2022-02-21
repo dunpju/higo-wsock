@@ -1,6 +1,7 @@
 package wsock
 
 import (
+	"fmt"
 	"github.com/dengpju/higo-router/router"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -12,6 +13,7 @@ import (
 const (
 	WebsocketServe = "websocket"
 	WsConnIp       = "ws_conn_ip"
+	WsRequest      = "ws_request"
 	WsRespstring   = "string"
 	WsRespmap      = "map"
 	WsRespstruct   = "struct"
@@ -95,18 +97,34 @@ func ConnUpgrader() gin.HandlerFunc {
 				panic(r)
 			}
 		}()
-
+		fmt.Println(ctx.IsAborted())
 		if router.GetRoutes(WebsocketServe).Exist(ctx.Request.Method, ctx.Request.URL.Path) {
 			route := router.GetRoutes(WebsocketServe).Route(ctx.Request.Method, ctx.Request.URL.Path)
 			if route.IsWs() {
+				// 升级鉴权
+				// 升级
 				conn := upgraderConnFunc(ctx)
 				// 设置变量到Context的key中，可以通过Get()取
 				ctx.Set(WsConnIp, conn)
-				// 终止执行
-				ctx.Abort()
+			} else {
+				ctx.Next()
 			}
+		} else {
+			ctx.Next()
 		}
+	}
+}
 
-		ctx.Next()
+func handle(handlerFunc gin.HandlerFunc) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		_, ok := ctx.Get(WsRequest)
+		if !ok {
+			ctx.Abort()
+		} else {
+			if _, ok = ctx.Get(WsConnIp); !ok {
+				panic(fmt.Errorf("websocket conn client non-existent"))
+			}
+			handlerFunc(ctx)
+		}
 	}
 }

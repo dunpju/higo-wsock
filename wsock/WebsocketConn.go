@@ -11,6 +11,7 @@ import (
 	"github.com/dengpju/higo-utils/utils/runtimeutil"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	"math"
 	"net/http"
 	"sync"
 	"time"
@@ -137,14 +138,16 @@ loop:
 	}
 }
 
+const abortIndex = math.MaxInt8 / 2
+
 func (this *WebsocketConn) dispatch(msg *WsReadMessage) {
 	defer func() {
 		if r := recover(); r != nil {
 			panic(r)
 		}
 	}()
-	handle := this.route.Handle()
-	ctx := this.context
+	ctx := this.context.Copy()
+	ctx.Set(WsRequest, WsRequest)
 	reader := bytes.NewReader(msg.MessageData)
 	request, err := http.NewRequest(router.POST, this.route.AbsolutePath(), reader)
 	if err != nil {
@@ -152,7 +155,15 @@ func (this *WebsocketConn) dispatch(msg *WsReadMessage) {
 	}
 	request.Header.Set("Content-Type", "application/json")
 	ctx.Request = request
-	handle.(gin.HandlerFunc)(ctx)
+	handlers := this.route.Middleware()
+	fmt.Println(abortIndex)
+	for _, handler := range handlers.([]interface{}) {
+		if handle, ok := handler.(gin.HandlerFunc); ok {
+			handle(ctx)
+			fmt.Println(ctx.IsAborted())
+		}
+	}
+	this.route.Handle().(gin.HandlerFunc)(ctx)
 }
 
 func (this *WebsocketConn) WriteMessage(message string) {
