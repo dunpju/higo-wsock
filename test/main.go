@@ -7,6 +7,7 @@ import (
 	"github.com/dengpju/higo-wsock/wsock"
 	"github.com/gin-gonic/gin"
 	"log"
+	"time"
 )
 
 //jmeter 压测 https://www.bbsmax.com/A/8Bz8jog15x/
@@ -65,6 +66,8 @@ func main() {
 		fmt.Println(string(data))
 		return data
 	}
+	wsock.PingFailLimit = 3
+	wsock.WsPitpatSleep = time.Second * 5
 	err := r.Run(":8080")
 	if err != nil {
 		log.Fatalln(err)

@@ -23,6 +23,7 @@ var (
 	wsRecoverOnce   sync.Once
 	Encode          Encrypt
 	Decode          Encrypt
+	PingFailLimit   int
 )
 
 func init() {
@@ -52,6 +53,7 @@ func init() {
 	Decode = func(data []byte) []byte {
 		return data
 	}
+	PingFailLimit = 10
 }
 
 type WsRecoverFunc func(conn *WebsocketConn, r interface{}) string
@@ -59,14 +61,15 @@ type WsRecoverFunc func(conn *WebsocketConn, r interface{}) string
 type Encrypt func(data []byte) []byte
 
 type WebsocketConn struct {
-	lock      sync.RWMutex
-	context   *gin.Context
-	route     *router.Route
-	conn      *websocket.Conn
-	readChan  chan *WsReadMessage
-	writeChan chan WsWriteMessage
-	closeChan chan byte
-	isAborted bool
+	lock            sync.RWMutex
+	context         *gin.Context
+	route           *router.Route
+	conn            *websocket.Conn
+	readChan        chan *WsReadMessage
+	writeChan       chan WsWriteMessage
+	closeChan       chan byte
+	isAborted       bool
+	PingFailCounter int
 }
 
 func NewWebsocketConn(ctx *gin.Context, route *router.Route, conn *websocket.Conn) *WebsocketConn {
@@ -90,11 +93,6 @@ func (this *WebsocketConn) close() {
 
 func (this *WebsocketConn) ping(waittime time.Duration) {
 	for WsPingHandle(this, waittime) {
-	}
-}
-
-func (this *WebsocketConn) pong(waittime time.Duration) {
-	for WsPongHandle(this, waittime) {
 	}
 }
 
@@ -248,18 +246,13 @@ func wsPingFunc(websocketConn *WebsocketConn, waittime time.Duration) bool {
 	time.Sleep(waittime)
 	err := websocketConn.conn.WriteMessage(websocket.PingMessage, []byte("ping"))
 	if err != nil {
-		WsContainer.Remove(websocketConn.conn)
-		return false
-	}
-	return true
-}
-
-func wsPongFunc(websocketConn *WebsocketConn, waittime time.Duration) bool {
-	time.Sleep(waittime)
-	err := websocketConn.conn.WriteMessage(websocket.PongMessage, []byte("pong"))
-	if err != nil {
-		WsContainer.Remove(websocketConn.conn)
-		return false
+		websocketConn.PingFailCounter++
+		if websocketConn.PingFailCounter >= PingFailLimit {
+			WsContainer.Remove(websocketConn.conn)
+			return false
+		}
+	} else {
+		websocketConn.PingFailCounter = 0
 	}
 	return true
 }

@@ -24,8 +24,7 @@ const (
 var (
 	serve         string
 	Upgrader      websocket.Upgrader
-	WsPingHandle  WebsocketPiongFunc
-	WsPongHandle  WebsocketPiongFunc
+	WsPingHandle  WebsocketPingFunc
 	WsContainer   *WebsocketClient
 	WsCheckOrigin WebsocketCheckFunc
 	WsPitpatSleep time.Duration
@@ -39,7 +38,6 @@ func init() {
 		CheckOrigin: WsCheckOrigin,
 	}
 	WsPingHandle = wsPingFunc
-	WsPongHandle = wsPongFunc
 	WsContainer = NewWebsocketClient()
 	WsPitpatSleep = time.Second * 30
 }
@@ -57,7 +55,7 @@ func Serve() string {
 
 type WebsocketCheckFunc func(r *http.Request) bool
 
-type WebsocketPiongFunc func(websocketConn *WebsocketConn, waittime time.Duration) bool
+type WebsocketPingFunc func(websocketConn *WebsocketConn, waittime time.Duration) bool
 
 type WebsocketClient struct {
 	clients sync.Map
