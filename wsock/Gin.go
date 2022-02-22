@@ -58,7 +58,7 @@ func (this *RouterGroup) Handle(httpMethod, relativePath string, handlers ...gin
 	return this
 }
 
-func (this *RouterGroup) Upgrade(httpMethod, relativePath string, handle gin.HandlerFunc, attributes ...*router.RouteAttribute) *RouterGroup {
+func (this *RouterGroup) Upgrade(relativePath string, handle gin.HandlerFunc, attributes ...*router.RouteAttribute) *RouterGroup {
 	groupHandlers := make([]interface{}, 0)
 	for _, handler := range this.group.Handlers {
 		handlerName := runtime.FuncForPC(reflect.ValueOf(handler).Pointer()).Name()
@@ -81,12 +81,12 @@ func (this *RouterGroup) Upgrade(httpMethod, relativePath string, handle gin.Han
 	path := this.group.BasePath() + relativePath
 	path = "/" + strings.TrimLeft(path, "/")
 	abs := make([]*router.RouteAttribute, 0)
-	abs = append(abs, router.Flag(router.Unique(httpMethod, path)), router.IsWs(true))
+	abs = append(abs, router.Flag(router.Unique(router.GET, path)), router.IsWs(true))
 	abs = append(abs, attributes...)
 	if len(groupHandlers) > 0 {
 		abs = append(abs, router.Middleware(groupHandlers...))
 	}
-	router.AddRoute(httpMethod, path, handler(handle), abs...)
-	this.group.Handle(httpMethod, relativePath, handler(handle))
+	router.AddRoute(router.GET, path, handler(handle), abs...)
+	this.group.Handle(router.GET, relativePath, handler(handle))
 	return this
 }

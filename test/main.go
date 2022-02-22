@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/dengpju/higo-router/router"
+	"github.com/dengpju/higo-utils/utils/encodeutil"
 	"github.com/dengpju/higo-wsock/wsock"
 	"github.com/gin-gonic/gin"
 	"log"
@@ -39,11 +40,11 @@ func main() {
 	}, func(context *gin.Context) {
 		fmt.Println("test2")
 	})
-	g2.Upgrade("GET", "/conn", func(context *gin.Context) {
+	g2.Upgrade("/conn", func(context *gin.Context) {
 		fmt.Println("conn1")
 		wsock.Response(context).WriteMessage("11")
 	})
-	r.Upgrade("GET", "/conn1", func(context *gin.Context) {
+	r.Upgrade("/conn1", func(context *gin.Context) {
 		fmt.Println("conn2")
 		fmt.Println(context.Writer)
 		loginEntity := NewLoginEntity()
@@ -57,6 +58,13 @@ func main() {
 	router.AddServe(wsock.Serve()).ForEach(func(index int, route *router.Route) {
 		fmt.Println(route)
 	})
+	wsock.Encode = func(data []byte) []byte {
+		return []byte(encodeutil.Base64Encode(data))
+	}
+	wsock.Decode = func(data []byte) []byte {
+		fmt.Println(string(data))
+		return data
+	}
 	err := r.Run(":8080")
 	if err != nil {
 		log.Fatalln(err)

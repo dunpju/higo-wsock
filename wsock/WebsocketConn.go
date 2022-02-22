@@ -21,6 +21,8 @@ var (
 	//Recover处理函数(可自定义替换)
 	WsRecoverHandle WsRecoverFunc
 	wsRecoverOnce   sync.Once
+	Encode          Encrypt
+	Decode          Encrypt
 )
 
 func init() {
@@ -44,9 +46,17 @@ func init() {
 			return
 		}
 	})
+	Encode = func(data []byte) []byte {
+		return data
+	}
+	Decode = func(data []byte) []byte {
+		return data
+	}
 }
 
 type WsRecoverFunc func(conn *WebsocketConn, r interface{}) string
+
+type Encrypt func(data []byte) []byte
 
 type WebsocketConn struct {
 	lock      sync.RWMutex
@@ -92,12 +102,13 @@ func (this *WebsocketConn) pong(waittime time.Duration) {
 
 func (this *WebsocketConn) readLoop() {
 	for {
-		t, message, err := this.conn.ReadMessage()
+		t, msg, err := this.conn.ReadMessage()
 		if err != nil {
 			this.close()
 			break
 		}
-		this.readChan <- NewReadMessage(t, message)
+		msg = Decode(msg)
+		this.readChan <- NewReadMessage(t, msg)
 	}
 }
 
@@ -106,6 +117,7 @@ loop:
 	for {
 		select {
 		case msg := <-this.writeChan:
+			msg.MessageData = Encode(msg.MessageData)
 			if WsResperror == msg.MessageType {
 				_ = this.conn.WriteMessage(websocket.TextMessage, msg.MessageData)
 				this.close()
