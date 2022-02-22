@@ -89,14 +89,12 @@ func (this *WebsocketConn) close() {
 }
 
 func (this *WebsocketConn) ping(waittime time.Duration) {
-	for {
-		WsPingHandle(this, waittime)
+	for WsPingHandle(this, waittime) {
 	}
 }
 
 func (this *WebsocketConn) pong(waittime time.Duration) {
-	for {
-		WsPongHandle(this, waittime)
+	for WsPongHandle(this, waittime) {
 	}
 }
 
@@ -246,20 +244,22 @@ func upgrader(ctx *gin.Context) string {
 	return client.RemoteAddr().String()
 }
 
-func wsPingFunc(websocketConn *WebsocketConn, waittime time.Duration) {
+func wsPingFunc(websocketConn *WebsocketConn, waittime time.Duration) bool {
 	time.Sleep(waittime)
-	err := websocketConn.conn.WriteMessage(websocket.TextMessage, []byte("ping"))
+	err := websocketConn.conn.WriteMessage(websocket.PingMessage, []byte("ping"))
 	if err != nil {
 		WsContainer.Remove(websocketConn.conn)
-		return
+		return false
 	}
+	return true
 }
 
-func wsPongFunc(websocketConn *WebsocketConn, waittime time.Duration) {
+func wsPongFunc(websocketConn *WebsocketConn, waittime time.Duration) bool {
 	time.Sleep(waittime)
-	err := websocketConn.conn.WriteMessage(websocket.TextMessage, []byte("pong"))
+	err := websocketConn.conn.WriteMessage(websocket.PongMessage, []byte("pong"))
 	if err != nil {
 		WsContainer.Remove(websocketConn.conn)
-		return
+		return false
 	}
+	return true
 }
