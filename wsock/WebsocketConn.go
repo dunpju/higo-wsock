@@ -152,13 +152,12 @@ func (this *WebsocketConn) dispatch(msg *WsReadMessage) {
 			panic(r)
 		}
 	}()
-	conn, ok := this.context.Get(WsConnIp)
-	if !ok {
+	if this.conn == nil {
 		panic(fmt.Errorf("dispatch: websocket conn client non-existent"))
 	}
 	ctx := &gin.Context{Request: &http.Request{PostForm: make(url.Values)}}
 	ctx.Writer = this.context.Writer
-	ctx.Set(WsConnIp, conn)
+	ctx.Set(WsConnIp, this.conn)
 	ctx.Set(WsRequest, WsRequest)
 	reader := bytes.NewReader(msg.MessageData)
 	request, err := http.NewRequest(router.POST, this.route.AbsolutePath(), reader)
