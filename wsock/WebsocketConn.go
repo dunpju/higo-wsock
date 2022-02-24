@@ -154,7 +154,7 @@ func (this *WebsocketConn) dispatch(msg *WsReadMessage) {
 	}()
 	conn, ok := this.context.Get(WsConnIp)
 	if !ok {
-		panic(fmt.Errorf("websocket conn client non-existent"))
+		panic(fmt.Errorf("dispatch: websocket conn client non-existent"))
 	}
 	ctx := &gin.Context{Request: &http.Request{PostForm: make(url.Values)}}
 	ctx.Writer = this.context.Writer
@@ -222,12 +222,12 @@ func Response(ctx *gin.Context) *WebsocketConn {
 func conn(ctx *gin.Context) *WebsocketConn {
 	client, ok := ctx.Get(WsConnIp)
 	if !ok {
-		panic(fmt.Errorf("websocket conn client non-existent"))
+		panic(fmt.Errorf("conn: websocket conn client non-existent"))
 	}
 	if conn, ok := WsContainer.clients.Load(client); ok {
 		return conn.(*WebsocketConn)
 	} else {
-		panic(fmt.Errorf("websocket conn non-existent"))
+		panic(fmt.Errorf("conn: websocket conn non-existent"))
 	}
 }
 
