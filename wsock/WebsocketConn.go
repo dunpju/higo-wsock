@@ -157,7 +157,7 @@ func (this *WebsocketConn) dispatch(msg *WsReadMessage) {
 	}
 	ctx := &gin.Context{Request: &http.Request{PostForm: make(url.Values)}}
 	ctx.Writer = this.context.Writer
-	ctx.Set(WsConnIp, this.conn)
+	ctx.Set(WsConnIp, this.conn.RemoteAddr().String())
 	ctx.Set(WsRequest, WsRequest)
 	reader := bytes.NewReader(msg.MessageData)
 	request, err := http.NewRequest(router.POST, this.route.AbsolutePath(), reader)
