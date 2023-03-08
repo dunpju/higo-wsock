@@ -125,7 +125,7 @@ func handler(handlerFunc gin.HandlerFunc) gin.HandlerFunc {
 			ctx.Abort()
 		} else {
 			if _, ok = ctx.Get(WsConnIp); !ok {
-				panic(fmt.Errorf("websocket conn client non-existent"))
+				panic(fmt.Errorf("handler: websocket conn client non-existent"))
 			}
 			handlerFunc(ctx)
 		}
