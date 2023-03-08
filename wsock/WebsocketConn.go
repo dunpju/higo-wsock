@@ -189,8 +189,8 @@ func (this *WebsocketConn) WriteMessage(message string) {
 	}(message)
 }
 
-func (this *WebsocketConn) WriteMap(message maputil.ArrayMap) {
-	go func(msg maputil.ArrayMap) {
+func (this *WebsocketConn) WriteMap(message *maputil.ArrayMap) {
+	go func(msg *maputil.ArrayMap) {
 		this.writeChan <- WsRespMap(msg)
 	}(message)
 }
