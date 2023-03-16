@@ -90,3 +90,7 @@ func (this *RouterGroup) Upgrade(relativePath string, handle gin.HandlerFunc, at
 	this.group.Handle(router.GET, relativePath, handler(handle))
 	return this
 }
+
+func (this *RouterGroup) WSock(relativePath string, handle gin.HandlerFunc, attributes ...*router.RouteAttribute) *RouterGroup {
+	return this.Upgrade(relativePath, handle, attributes...)
+}

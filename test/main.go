@@ -10,8 +10,9 @@ import (
 	"time"
 )
 
-//jmeter 压测 https://www.bbsmax.com/A/8Bz8jog15x/
+// jmeter 压测 https://www.bbsmax.com/A/8Bz8jog15x/
 func main() {
+
 	r := wsock.Default()
 	r.Gin().Static("/index", "./dist")
 	r.Use(wsock.ConnUpgrader())
