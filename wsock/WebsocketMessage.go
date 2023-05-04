@@ -2,7 +2,7 @@ package wsock
 
 import (
 	"encoding/json"
-	"github.com/dengpju/higo-utils/utils/maputil"
+	"github.com/dunpju/higo-utils/utils/maputil"
 )
 
 type WsReadMessage struct {

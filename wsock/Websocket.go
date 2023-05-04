@@ -2,7 +2,7 @@ package wsock
 
 import (
 	"fmt"
-	"github.com/dengpju/higo-router/router"
+	"github.com/dunpju/higo-router/router"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"net/http"
@@ -97,7 +97,7 @@ func (this *WebsocketClient) Get(key string) (*WebsocketConn, bool) {
 	return nil, ok
 }
 
-//连接升级
+// 连接升级
 func ConnUpgrader() gin.HandlerFunc {
 	router.AddServe(Serve())
 	return func(ctx *gin.Context) {
@@ -107,7 +107,10 @@ func ConnUpgrader() gin.HandlerFunc {
 			}
 		}()
 		if router.GetRoutes(Serve()).Exist(ctx.Request.Method, ctx.Request.URL.Path) {
-			route := router.GetRoutes(Serve()).Route(ctx.Request.Method, ctx.Request.URL.Path)
+			route, err := router.GetRoutes(Serve()).Route(ctx.Request.Method, ctx.Request.URL.Path)
+			if err != nil {
+				panic(err)
+			}
 			if route.IsWs() {
 				conn := upgrader(ctx)
 				ctx.Set(WsConnIp, conn)
