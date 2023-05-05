@@ -49,6 +49,7 @@ func main() {
 	r.Upgrade("/conn1", func(context *gin.Context) {
 		fmt.Println("conn2")
 		fmt.Println(context.Writer)
+		fmt.Println("到这里来了")
 		loginEntity := NewLoginEntity()
 		err := context.ShouldBind(loginEntity)
 		if err != nil {
@@ -60,11 +61,13 @@ func main() {
 	router.AddServe(wsock.Serve()).ForEach(func(route *router.Route) {
 		fmt.Println(route)
 	})
+	// 自定义编码
 	wsock.Encode = func(data []byte) []byte {
 		return []byte(encodeutil.Base64Encode(data))
 	}
+	// 自定义解码
 	wsock.Decode = func(data []byte) []byte {
-		fmt.Println(string(data))
+		fmt.Println("jjj", string(data), "hhh")
 		return data
 	}
 	wsock.PingFailLimit = 3
