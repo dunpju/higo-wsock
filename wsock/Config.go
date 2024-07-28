@@ -2,28 +2,32 @@ package wsock
 
 import "sync"
 
-var requireUpgrade *UpgradeConfigurer
+var requireUpgrade *UpgradeConfigure
 
 func init() {
-	requireUpgrade = NewUpgradeConfigurer()
+	requireUpgrade = newUpgradeConfigure()
 }
 
-type UpgradeConfigurer struct {
+type UpgradeConfigure struct {
 	config *sync.Map
 }
 
-func (this *UpgradeConfigurer) Config() *sync.Map {
+func (this *UpgradeConfigure) Config() *sync.Map {
 	return this.config
 }
 
-func (this *UpgradeConfigurer) Load(httpMethod, relativePath string) (value interface{}, ok bool) {
+func (this *UpgradeConfigure) Load(httpMethod, relativePath string) (value interface{}, ok bool) {
 	return this.config.Load(httpMethod + "@" + relativePath)
 }
 
-func NewUpgradeConfigurer() *UpgradeConfigurer {
-	return &UpgradeConfigurer{config: &sync.Map{}}
+func newUpgradeConfigure() *UpgradeConfigure {
+	return &UpgradeConfigure{config: &sync.Map{}}
 }
 
 func UpgradeConn(httpMethod, relativePath string) {
 	requireUpgrade.config.Store(httpMethod+"@"+relativePath, true)
+}
+
+func UpgradeConfig() *UpgradeConfigure {
+	return requireUpgrade
 }

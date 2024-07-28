@@ -23,7 +23,7 @@ var (
 	wsRecoverOnce   sync.Once
 	Encode          Encrypt
 	Decode          Encrypt
-	PingFailLimit   int
+	FailLimit       int
 )
 
 func init() {
@@ -53,7 +53,7 @@ func init() {
 	Decode = func(data []byte) []byte {
 		return data
 	}
-	PingFailLimit = 10
+	FailLimit = 10
 }
 
 type WsRecoverFunc func(conn *WebsocketConn, r interface{}) string
@@ -70,6 +70,7 @@ type WebsocketConn struct {
 	closeChan       chan byte
 	isAborted       bool
 	PingFailCounter int
+	PongFailCounter int
 }
 
 func NewWebsocketConn(ctx *gin.Context, route *router.Route, conn *websocket.Conn) *WebsocketConn {
@@ -91,8 +92,13 @@ func (this *WebsocketConn) close() {
 	this.closeChan <- 1
 }
 
-func (this *WebsocketConn) ping(waittime time.Duration) {
-	for WsPingHandle(this, waittime) {
+func (this *WebsocketConn) ping(wait time.Duration) {
+	for WsPingHandle(this, wait) {
+	}
+}
+
+func (this *WebsocketConn) pong(wait time.Duration) {
+	for WsPongHandle(this, wait) {
 	}
 }
 
@@ -232,8 +238,8 @@ func conn(ctx *gin.Context) *WebsocketConn {
 }
 
 // 升级
-func upgrader(ctx *gin.Context) string {
-	client, err := Upgrader.Upgrade(ctx.Writer, ctx.Request, nil)
+func upGrader(ctx *gin.Context) string {
+	client, err := UpGrader.Upgrade(ctx.Writer, ctx.Request, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -248,15 +254,30 @@ func upgrader(ctx *gin.Context) string {
 
 func wsPingFunc(websocketConn *WebsocketConn, waittime time.Duration) bool {
 	time.Sleep(waittime)
-	err := websocketConn.conn.WriteMessage(websocket.PingMessage, []byte("ping"))
+	err := websocketConn.conn.WriteMessage(websocket.PingMessage, []byte(PingFunc()))
 	if err != nil {
 		websocketConn.PingFailCounter++
-		if websocketConn.PingFailCounter >= PingFailLimit {
+		if websocketConn.PingFailCounter >= FailLimit {
 			WsContainer.Remove(websocketConn.conn)
 			return false
 		}
 	} else {
 		websocketConn.PingFailCounter = 0
+	}
+	return true
+}
+
+func wsPongFunc(websocketConn *WebsocketConn, wait time.Duration) bool {
+	time.Sleep(wait)
+	err := websocketConn.conn.WriteMessage(websocket.PongMessage, []byte(PongFunc()))
+	if err != nil {
+		websocketConn.PongFailCounter++
+		if websocketConn.PongFailCounter >= FailLimit {
+			WsContainer.Remove(websocketConn.conn)
+			return false
+		}
+	} else {
+		websocketConn.PongFailCounter = 0
 	}
 	return true
 }

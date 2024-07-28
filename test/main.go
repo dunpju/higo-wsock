@@ -42,7 +42,7 @@ func main() {
 		fmt.Println("test2")
 	})
 	g2.Upgrade("/conn", func(context *gin.Context) {
-		fmt.Println("conn1")
+		fmt.Println("conn")
 		wsock.Response(context).WriteMessage("11")
 	})
 	r.Upgrade("/conn1", func(context *gin.Context) {
@@ -66,8 +66,8 @@ func main() {
 		fmt.Println(string(data))
 		return data
 	}
-	wsock.PingFailLimit = 3
-	wsock.WsPitpatSleep = time.Second * 5
+	wsock.FailLimit = 3
+	wsock.WsPitPatSleep = time.Second * 5
 	err := r.Run(":8080")
 	if err != nil {
 		log.Fatalln(err)

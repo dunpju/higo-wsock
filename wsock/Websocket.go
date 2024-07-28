@@ -23,23 +23,33 @@ const (
 
 var (
 	serve         string
-	Upgrader      websocket.Upgrader
-	WsPingHandle  WebsocketPingFunc
+	UpGrader      websocket.Upgrader
+	WsPingHandle  WebsocketFunc
+	WsPongHandle  WebsocketFunc
 	WsContainer   *WebsocketClient
 	WsCheckOrigin WebsocketCheckFunc
-	WsPitpatSleep time.Duration
+	WsPitPatSleep time.Duration
+	PingFunc      PitPatFunc
+	PongFunc      PitPatFunc
 )
 
 func init() {
 	WsCheckOrigin = func(r *http.Request) bool {
 		return true
 	}
-	Upgrader = websocket.Upgrader{
+	UpGrader = websocket.Upgrader{
 		CheckOrigin: WsCheckOrigin,
 	}
 	WsPingHandle = wsPingFunc
+	WsPongHandle = wsPongFunc
 	WsContainer = NewWebsocketClient()
-	WsPitpatSleep = time.Second * 30
+	WsPitPatSleep = time.Second * 30
+	PingFunc = func() string {
+		return "ping"
+	}
+	PongFunc = func() string {
+		return "pong"
+	}
 }
 
 func SetServe(ser string) {
@@ -55,7 +65,9 @@ func Serve() string {
 
 type WebsocketCheckFunc func(r *http.Request) bool
 
-type WebsocketPingFunc func(websocketConn *WebsocketConn, waittime time.Duration) bool
+type WebsocketFunc func(websocketConn *WebsocketConn, wait time.Duration) bool
+
+type PitPatFunc func() string
 
 type WebsocketClient struct {
 	clients sync.Map
@@ -68,7 +80,7 @@ func NewWebsocketClient() *WebsocketClient {
 func (this *WebsocketClient) Store(ctx *gin.Context, route *router.Route, conn *websocket.Conn) {
 	wsConn := NewWebsocketConn(ctx, route, conn)
 	this.clients.Store(conn.RemoteAddr().String(), wsConn)
-	go wsConn.ping(WsPitpatSleep) //心跳
+	go wsConn.ping(WsPitPatSleep) //心跳
 	go wsConn.writeLoop()         //写循环
 	go wsConn.readLoop()          //读循环
 	go wsConn.handlerLoop()       //处理控制循环
@@ -76,10 +88,10 @@ func (this *WebsocketClient) Store(ctx *gin.Context, route *router.Route, conn *
 
 func (this *WebsocketClient) SendAll(msg string) {
 	this.clients.Range(func(key, client interface{}) bool {
-		conn := client.(*WebsocketConn).conn
-		err := conn.WriteMessage(websocket.TextMessage, []byte(msg))
+		connect := client.(*WebsocketConn).conn
+		err := connect.WriteMessage(websocket.TextMessage, []byte(msg))
 		if err != nil {
-			this.Remove(conn)
+			this.Remove(connect)
 		}
 		return true
 	})
@@ -112,7 +124,7 @@ func ConnUpGrader() gin.HandlerFunc {
 				panic(err)
 			}
 			if route.IsWs() {
-				conn := upgrader(ctx)
+				conn := upGrader(ctx)
 				ctx.Set(WsConnIp, conn)
 				return
 			}
