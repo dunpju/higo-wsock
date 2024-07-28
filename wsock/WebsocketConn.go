@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"fmt"
 	"gitee.com/dengpju/higo-code/code"
-	"github.com/dengpju/higo-logger/logger"
-	"github.com/dengpju/higo-router/router"
-	"github.com/dengpju/higo-throw/exception"
-	"github.com/dengpju/higo-utils/utils/maputil"
-	"github.com/dengpju/higo-utils/utils/runtimeutil"
+	"github.com/dunpju/higo-logger/logger"
+	"github.com/dunpju/higo-router/router"
+	"github.com/dunpju/higo-throw/exception"
+	"github.com/dunpju/higo-utils/utils/maputil"
+	"github.com/dunpju/higo-utils/utils/runtimeutil"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"net/http"
@@ -131,7 +131,8 @@ loop:
 func (this *WebsocketConn) handlerLoop() {
 	defer func() {
 		if r := recover(); r != nil {
-			logger.LoggerStack(r, runtimeutil.GoroutineID())
+			goid, _ := runtimeutil.GoroutineID()
+			logger.LoggerStack(r, goid)
 			this.writeChan <- WsRespError(WsRecoverHandle(this, r))
 		}
 	}()
@@ -236,7 +237,11 @@ func upgrader(ctx *gin.Context) string {
 	if err != nil {
 		panic(err)
 	}
-	route := router.GetRoutes(Serve()).Route(ctx.Request.Method, ctx.Request.URL.Path).SetHeader(ctx.Request.Header)
+	route, err := router.GetRoutes(Serve()).Route(ctx.Request.Method, ctx.Request.URL.Path)
+	if err != nil {
+		panic(err)
+	}
+	route.SetHeader(ctx.Request.Header)
 	WsContainer.Store(ctx, route, client)
 	return client.RemoteAddr().String()
 }

@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/dengpju/higo-router/router"
-	"github.com/dengpju/higo-utils/utils/encodeutil"
 	"github.com/dengpju/higo-wsock/wsock"
+	"github.com/dunpju/higo-router/router"
+	"github.com/dunpju/higo-utils/utils/encodeutil"
 	"github.com/gin-gonic/gin"
 	"log"
 	"time"
@@ -56,8 +56,8 @@ func main() {
 		fmt.Println("Conn", loginEntity)
 		wsock.Response(context).WriteStruct(loginEntity)
 	}, router.IsAuth(true))
-	router.AddServe(wsock.Serve()).ForEach(func(index int, route *router.Route) {
-		fmt.Println(route)
+	router.AddServe(wsock.Serve()).ForEach(func(route *router.Route) {
+		fmt.Println(*route)
 	})
 	wsock.Encode = func(data []byte) []byte {
 		return []byte(encodeutil.Base64Encode(data))

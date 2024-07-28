@@ -1,7 +1,7 @@
 package wsock
 
 import (
-	"github.com/dengpju/higo-router/router"
+	"github.com/dunpju/higo-router/router"
 	"github.com/gin-gonic/gin"
 	"reflect"
 	"regexp"
