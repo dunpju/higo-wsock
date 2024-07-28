@@ -1,7 +1,6 @@
 package wsock
 
 import (
-	"fmt"
 	"github.com/dunpju/higo-router/router"
 	"github.com/gin-gonic/gin"
 	"reflect"
@@ -63,7 +62,6 @@ func (this *RouterGroup) Upgrade(relativePath string, handle gin.HandlerFunc, at
 	groupHandlers := make([]interface{}, 0)
 	for _, handler := range this.group.Handlers {
 		handlerName := runtime.FuncForPC(reflect.ValueOf(handler).Pointer()).Name()
-		fmt.Println(handlerName)
 		b0, err := regexp.MatchString(`\/gin\.LoggerWithConfig\.func1$`, handlerName)
 		if err != nil {
 			panic(err)
