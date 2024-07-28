@@ -1,4 +1,4 @@
-module github.com/dengpju/higo-wsock
+module github.com/dunpju/higo-wsock
 
 go 1.16
 

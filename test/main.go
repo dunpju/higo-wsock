@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/dengpju/higo-wsock/wsock"
 	"github.com/dunpju/higo-router/router"
 	"github.com/dunpju/higo-utils/utils/encodeutil"
+	"github.com/dunpju/higo-wsock/wsock"
 	"github.com/gin-gonic/gin"
 	"log"
 	"time"
@@ -14,7 +14,7 @@ import (
 func main() {
 	r := wsock.Default()
 	r.Gin().Static("/index", "./dist")
-	r.Use(wsock.ConnUpgrader())
+	r.Use(wsock.ConnUpGrader())
 	r.Use(func(context *gin.Context) {
 		fmt.Println("use1")
 		fmt.Println(context.Request.URL.Query().Get("token"))
