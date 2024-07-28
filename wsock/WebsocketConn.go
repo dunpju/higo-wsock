@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	//Recover处理函数(可自定义替换)
+	// WsRecoverHandle Recover处理函数(可自定义替换)
 	WsRecoverHandle WsRecoverFunc
 	wsRecoverOnce   sync.Once
 	Encode          Encrypt
