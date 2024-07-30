@@ -146,3 +146,7 @@ func handler(handlerFunc gin.HandlerFunc) gin.HandlerFunc {
 		}
 	}
 }
+
+func Handler(handlerFunc gin.HandlerFunc) gin.HandlerFunc {
+	return handler(handlerFunc)
+}
