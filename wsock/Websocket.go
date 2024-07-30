@@ -126,6 +126,7 @@ func ConnUpGrader() gin.HandlerFunc {
 			if route.IsWs() {
 				conn := upGrader(ctx)
 				ctx.Set(WsConnIp, conn)
+				ctx.Abort()
 				return
 			}
 		}
