@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-//jmeter 压测 https://www.bbsmax.com/A/8Bz8jog15x/
+// jmeter 压测 https://www.bbsmax.com/A/8Bz8jog15x/
 // http://wstool.js.org/
 func main() {
 	r := wsock.Default()
@@ -64,6 +64,7 @@ func main() {
 		return []byte(encodeutil.Base64Encode(data))
 	}
 	wsock.Decode = func(data []byte) []byte {
+		fmt.Println("wsock.Decode")
 		fmt.Println(string(data))
 		return data
 	}

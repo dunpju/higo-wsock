@@ -179,7 +179,13 @@ func (this *WebsocketConn) dispatch(msg *WsReadMessage) {
 	handlers = append(handlers.([]interface{}), this.route.Handle())
 	this.isAborted = false
 	for _, handler := range handlers.([]interface{}) {
-		if handle, ok := handler.(gin.HandlerFunc); ok {
+		if handle, ok := handler.(func(*gin.Context)); ok {
+			handle(ctx)
+			if this.isAborted {
+				break
+			}
+			this.isAborted = ctx.IsAborted()
+		} else if handle, ok := handler.(gin.HandlerFunc); ok {
 			handle(ctx)
 			if this.isAborted {
 				break
