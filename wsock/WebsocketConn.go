@@ -39,6 +39,8 @@ func init() {
 					String()
 			} else if arrayMap, ok := r.(maputil.ArrayMap); ok {
 				respMsg = arrayMap.String()
+			} else if arrayMap, ok := r.(*maputil.ArrayMap); ok {
+				respMsg = arrayMap.String()
 			} else {
 				respMsg = maputil.Array().
 					Put("code", 0).
