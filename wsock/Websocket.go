@@ -83,7 +83,7 @@ func (this *WebsocketClient) Store(ctx *gin.Context, route *router.Route, conn *
 	go wsConn.ping(WsPitPatSleep) //心跳
 	go wsConn.writeLoop()         //写循环
 	go wsConn.readLoop()          //读循环
-	go wsConn.handlerLoop()       //处理控制循环
+	go wsConn.listenLoop()        //监听循环调度消息
 }
 
 func (this *WebsocketClient) SendAll(msg string) {
@@ -136,6 +136,12 @@ func ConnUpGrader() gin.HandlerFunc {
 
 func handler(handlerFunc gin.HandlerFunc) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
+		defer func() {
+			// 向调度器传递panic
+			if r := recover(); r != nil {
+				panic(r)
+			}
+		}()
 		_, ok := ctx.Get(WsRequest)
 		if !ok {
 			ctx.Abort()

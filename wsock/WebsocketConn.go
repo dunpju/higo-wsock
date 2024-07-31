@@ -29,6 +29,8 @@ var (
 func init() {
 	wsRecoverOnce.Do(func() {
 		WsRecoverHandle = func(conn *WebsocketConn, r interface{}) (respMsg string) {
+			goid, _ := runtimeutil.GoroutineID()
+			logger.LoggerStack(r, goid)
 			if msg, ok := r.(*code.CodeMessage); ok {
 				respMsg = maputil.Array().
 					Put("code", msg.Code).
@@ -124,33 +126,36 @@ loop:
 				_ = this.conn.WriteMessage(websocket.TextMessage, msg.MessageData)
 				this.close()
 				break loop
-			}
-			err := this.conn.WriteMessage(websocket.TextMessage, msg.MessageData)
-			if err != nil {
-				this.close()
-				break loop
+			} else {
+				err := this.conn.WriteMessage(websocket.TextMessage, msg.MessageData)
+				if err != nil {
+					this.close()
+					break loop
+				}
 			}
 		}
 	}
 }
 
-func (this *WebsocketConn) handlerLoop() {
-	defer func() {
-		if r := recover(); r != nil {
-			goid, _ := runtimeutil.GoroutineID()
-			logger.LoggerStack(r, goid)
-			this.writeChan <- WsRespError(WsRecoverHandle(this, r))
-		}
-	}()
+func (this *WebsocketConn) listenLoop() {
+	defer this.recover()
 loop:
 	for {
 		select {
 		case msg := <-this.readChan:
 			this.dispatch(msg)
 		case <-this.closeChan:
-			break loop
+			goto loop
 		}
 	}
+}
+
+func (this *WebsocketConn) recover() {
+	if r := recover(); r != nil {
+		this.writeChan <- WsRespString(WsRecoverHandle(this, r))
+	}
+	// 再次拉起监听循环调度
+	this.listenLoop()
 }
 
 func (this *WebsocketConn) dispatch(msg *WsReadMessage) {
@@ -179,20 +184,26 @@ func (this *WebsocketConn) dispatch(msg *WsReadMessage) {
 	handlers = append(handlers.([]interface{}), this.route.Handle())
 	this.isAborted = false
 	for _, handler := range handlers.([]interface{}) {
-		if handle, ok := handler.(func(*gin.Context)); ok {
-			handle(ctx)
-			if this.isAborted {
-				break
-			}
-			this.isAborted = ctx.IsAborted()
-		} else if handle, ok := handler.(gin.HandlerFunc); ok {
-			handle(ctx)
-			if this.isAborted {
-				break
-			}
-			this.isAborted = ctx.IsAborted()
+		if !this.runHandle(ctx, handler) {
+			break
 		}
 	}
+}
+
+func (this *WebsocketConn) runHandle(ctx *gin.Context, handler interface{}) bool {
+	if handle, ok := handler.(func(*gin.Context)); ok {
+		handle(ctx)
+	} else if handle, ok := handler.(gin.HandlerFunc); ok {
+		handle(ctx)
+	} else {
+		panic(`Non-supported Handle Type`)
+	}
+
+	if this.isAborted {
+		return false
+	}
+	this.isAborted = ctx.IsAborted()
+	return true
 }
 
 func (this *WebsocketConn) WriteMessage(message string) {

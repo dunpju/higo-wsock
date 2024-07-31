@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"github.com/dunpju/higo-router/router"
-	"github.com/dunpju/higo-utils/utils/encodeutil"
 	"github.com/dunpju/higo-wsock/wsock"
 	"github.com/gin-gonic/gin"
 	"log"
@@ -61,7 +60,8 @@ func main() {
 		fmt.Println(*route)
 	})
 	wsock.Encode = func(data []byte) []byte {
-		return []byte(encodeutil.Base64Encode(data))
+		//return []byte(encodeutil.Base64Encode(data))
+		return data
 	}
 	wsock.Decode = func(data []byte) []byte {
 		fmt.Println("wsock.Decode")
