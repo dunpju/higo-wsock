@@ -182,10 +182,11 @@ func (this *WebsocketConn) dispatch(msg *WsReadMessage) {
 	request.RemoteAddr = this.context.Request.RemoteAddr
 	request.URL.RawQuery = this.context.Request.URL.Query().Encode()
 	ctx.Request = request
-	handlers := this.route.Middleware()
-	handlers = append(handlers.([]interface{}), this.route.Handle())
 	this.isAborted = false
-	for _, handler := range handlers.([]interface{}) {
+	handlers := make([]interface{}, 0)
+	handlers = append(handlers, this.route.Middlewares()...)
+	handlers = append(handlers, this.route.Handle())
+	for _, handler := range handlers {
 		if !this.runHandle(ctx, handler) {
 			break
 		}
