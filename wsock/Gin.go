@@ -62,15 +62,15 @@ func (this *RouterGroup) Upgrade(relativePath string, handle gin.HandlerFunc, at
 	groupHandlers := make([]interface{}, 0)
 	for _, handler := range this.group.Handlers {
 		handlerName := runtime.FuncForPC(reflect.ValueOf(handler).Pointer()).Name()
-		b0, err := regexp.MatchString(`\/gin\.LoggerWithConfig\.func1$`, handlerName)
+		b0, err := regexp.MatchString(LoggerWithConfigPattern, handlerName)
 		if err != nil {
 			panic(err)
 		}
-		b1, err := regexp.MatchString(`\/gin\.CustomRecoveryWithWriter\.func1$`, handlerName)
+		b1, err := regexp.MatchString(CustomRecoveryWithWriterPattern, handlerName)
 		if err != nil {
 			panic(err)
 		}
-		b2, err := regexp.MatchString(`\/wsock\.ConnUpGrader\.func1$`, handlerName)
+		b2, err := regexp.MatchString(ConnUpGraderPattern, handlerName)
 		if err != nil {
 			panic(err)
 		}

@@ -12,6 +12,7 @@ import (
 // jmeter 压测 https://www.bbsmax.com/A/8Bz8jog15x/
 // http://wstool.js.org/
 func main() {
+	router.AddServe(wsock.Serve())
 	r := wsock.Default()
 	r.Gin().Static("/index", "./dist")
 	r.Use(wsock.ConnUpGrader())

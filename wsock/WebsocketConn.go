@@ -13,8 +13,17 @@ import (
 	"github.com/gorilla/websocket"
 	"net/http"
 	"net/url"
+	"reflect"
+	"regexp"
+	"runtime"
 	"sync"
 	"time"
+)
+
+const (
+	LoggerWithConfigPattern         = `\/gin\.LoggerWithConfig\.func1$`
+	CustomRecoveryWithWriterPattern = `\/gin\.CustomRecoveryWithWriter\.func1$`
+	ConnUpGraderPattern             = `\/wsock\.ConnUpGrader\.func1$`
 )
 
 var (
@@ -174,7 +183,7 @@ func (this *WebsocketConn) dispatch(msg *WsReadMessage) {
 	ctx.Set(WsConnIp, this.conn.RemoteAddr().String())
 	ctx.Set(WsRequest, WsRequest)
 	reader := bytes.NewReader(msg.MessageData)
-	request, err := http.NewRequest(router.POST, this.route.AbsolutePath(), reader)
+	request, err := http.NewRequest(this.route.Method(), this.route.AbsolutePath(), reader)
 	if err != nil {
 		panic(err)
 	}
@@ -187,6 +196,14 @@ func (this *WebsocketConn) dispatch(msg *WsReadMessage) {
 	handlers = append(handlers, this.route.Middlewares()...)
 	handlers = append(handlers, this.route.Handle())
 	for _, handler := range handlers {
+		handlerName := runtime.FuncForPC(reflect.ValueOf(handler).Pointer()).Name()
+		connUpGraderHandlerOk, err := regexp.MatchString(ConnUpGraderPattern, handlerName)
+		if err != nil {
+			panic(err)
+		}
+		if connUpGraderHandlerOk {
+			continue
+		}
 		if !this.runHandle(ctx, handler) {
 			break
 		}

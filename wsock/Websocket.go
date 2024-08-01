@@ -111,7 +111,6 @@ func (this *WebsocketClient) Get(key string) (*WebsocketConn, bool) {
 
 // ConnUpGrader 连接升级
 func ConnUpGrader() gin.HandlerFunc {
-	router.AddServe(Serve())
 	return func(ctx *gin.Context) {
 		defer func() {
 			if r := recover(); r != nil {
