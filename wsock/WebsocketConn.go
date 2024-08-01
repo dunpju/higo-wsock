@@ -13,9 +13,7 @@ import (
 	"github.com/gorilla/websocket"
 	"net/http"
 	"net/url"
-	"reflect"
 	"regexp"
-	"runtime"
 	"sync"
 	"time"
 )
@@ -192,22 +190,19 @@ func (this *WebsocketConn) dispatch(msg *WsReadMessage) {
 	request.URL.RawQuery = this.context.Request.URL.Query().Encode()
 	ctx.Request = request
 	this.isAborted = false
-	handlers := make([]interface{}, 0)
-	handlers = append(handlers, this.route.Middlewares()...)
-	handlers = append(handlers, this.route.Handle())
-	for _, handler := range handlers {
-		handlerName := runtime.FuncForPC(reflect.ValueOf(handler).Pointer()).Name()
-		connUpGraderHandlerOk, err := regexp.MatchString(ConnUpGraderPattern, handlerName)
+	for _, middle := range this.route.Middlewares() {
+		connUpGraderHandlerOk, err := regexp.MatchString(ConnUpGraderPattern, middle.FuncForPcName())
 		if err != nil {
 			panic(err)
 		}
 		if connUpGraderHandlerOk {
 			continue
 		}
-		if !this.runHandle(ctx, handler) {
-			break
+		if !this.runHandle(ctx, middle.HandlerFunc()) {
+			return
 		}
 	}
+	this.runHandle(ctx, this.route.Handle())
 }
 
 func (this *WebsocketConn) runHandle(ctx *gin.Context, handler interface{}) bool {
