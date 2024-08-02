@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"io"
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 )
 
 func (this *WebsocketConn) recover() {
@@ -30,14 +32,18 @@ func (this *WebsocketConn) dispatch(msg *WsReadMessage) {
 	ctx.Writer = this.context.Writer
 	ctx.Set(WsConnIp, this.conn.RemoteAddr().String())
 	ctx.Set(WsRequest, WsRequest)
+
 	reader := bytes.NewReader(msg.MessageData)
 	request, err := http.NewRequest(this.route.Method(), this.route.AbsolutePath(), reader)
 	if err != nil {
 		panic(err)
 	}
 	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Content-Length", strconv.Itoa(reader.Len()))
 	request.RemoteAddr = this.context.Request.RemoteAddr
 	request.URL.RawQuery = this.context.Request.URL.Query().Encode()
+	request.Body = io.NopCloser(reader)
+
 	ctx.Request = request
 	this.isAborted = false
 	for _, handle := range this.route.Handlers() {

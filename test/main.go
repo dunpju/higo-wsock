@@ -5,6 +5,7 @@ import (
 	"github.com/dunpju/higo-router/router"
 	"github.com/dunpju/higo-wsock/wsock"
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 	"log"
 	"time"
 )
@@ -27,7 +28,7 @@ func main() {
 	})
 	g2 := g1.Group("/g2", func(context *gin.Context) {
 		fmt.Println("g2-1")
-		context.Abort()
+		//context.Abort()
 		context.Next()
 	}, func(context *gin.Context) {
 		fmt.Println("g2-2")
@@ -47,11 +48,12 @@ func main() {
 		fmt.Println("conn")
 		wsock.Response(context).WriteMessage("11")
 	})
+	// {"username":"3","password":"2","captcha_code":"731","time":"5350"}
 	r.Upgrade("/conn1", func(context *gin.Context) {
 		fmt.Println("conn2")
 		fmt.Println(context.Writer)
 		loginEntity := NewLoginEntity()
-		err := context.ShouldBind(loginEntity)
+		err := context.ShouldBindBodyWith(loginEntity, binding.JSON)
 		if err != nil {
 			panic(err)
 		}
