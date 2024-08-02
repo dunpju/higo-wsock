@@ -55,16 +55,15 @@ func (this *WebsocketConn) dispatch(msg *WsReadMessage) {
 }
 
 func (this *WebsocketConn) runHandle(ctx *gin.Context, handler interface{}) bool {
+	if this.isAborted {
+		return false
+	}
 	if handle, ok := handler.(func(*gin.Context)); ok {
 		handle(ctx)
 	} else if handle, ok := handler.(gin.HandlerFunc); ok {
 		handle(ctx)
 	} else {
 		panic(`Non-supported Handle Type`)
-	}
-
-	if this.isAborted {
-		return false
 	}
 	this.isAborted = ctx.IsAborted()
 	return true

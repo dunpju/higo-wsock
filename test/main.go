@@ -27,6 +27,7 @@ func main() {
 	})
 	g2 := g1.Group("/g2", func(context *gin.Context) {
 		fmt.Println("g2-1")
+		context.Abort()
 		context.Next()
 	}, func(context *gin.Context) {
 		fmt.Println("g2-2")
