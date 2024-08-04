@@ -154,3 +154,18 @@ func (this *GroupContainer) Store(key string, clientGroup *ClientGroup) {
 func (this *GroupContainer) Delete(key string) {
 	this.group.Delete(key)
 }
+
+func (this *GroupContainer) Range(fn func(key string, clientGroup *ClientGroup) bool) {
+	this.group.Range(func(key, value any) bool {
+		return fn(key.(string), value.(*ClientGroup))
+	})
+}
+
+func (this *GroupContainer) Len() int {
+	length := 0
+	this.Range(func(key string, clientGroup *ClientGroup) bool {
+		length++
+		return true
+	})
+	return length
+}

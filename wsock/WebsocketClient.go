@@ -46,6 +46,15 @@ func (this *WebsocketClient) Range(fn func(key string, client *WebsocketConn) bo
 	})
 }
 
+func (this *WebsocketClient) Len() int {
+	length := 0
+	this.Range(func(key string, client *WebsocketConn) bool {
+		length++
+		return true
+	})
+	return length
+}
+
 func (this *WebsocketClient) Remove(wsConn *WebsocketConn) {
 	this.clients.Delete(wsConn.Flag())
 	clientGroup, ok := WsGroupContainer.Get(wsConn.GroupFlag())
