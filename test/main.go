@@ -58,7 +58,9 @@ func main() {
 			panic(err)
 		}
 		fmt.Println("Conn", loginEntity)
-		wsock.Response(context).WriteStruct(loginEntity)
+		conn, _ := wsock.Conn("1")
+		conn.WriteStruct(loginEntity) // 测试自定义flag
+		//wsock.Response(context).WriteStruct(loginEntity)
 	}, router.IsAuth(true))
 	router.AddServe(wsock.Serve()).ForEach(func(route *router.Route) {
 		fmt.Println(*route)
@@ -74,6 +76,10 @@ func main() {
 	}
 	wsock.FailLimit = 3
 	wsock.WsPitPatSleep = time.Second * 5
+	// 自定义flag
+	wsock.ClientFlag = func() *wsock.ClientGroup {
+		return wsock.NewClientGroup("1")
+	}
 	err := r.Run(":8080")
 	if err != nil {
 		log.Fatalln(err)

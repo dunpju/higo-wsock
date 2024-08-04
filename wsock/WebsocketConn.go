@@ -2,12 +2,8 @@ package wsock
 
 import (
 	"fmt"
-	"gitee.com/dengpju/higo-code/code"
-	"github.com/dunpju/higo-logger/logger"
 	"github.com/dunpju/higo-router/router"
-	"github.com/dunpju/higo-throw/exception"
 	"github.com/dunpju/higo-utils/utils/maputil"
-	"github.com/dunpju/higo-utils/utils/runtimeutil"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"sync"
@@ -29,46 +25,13 @@ var (
 	FailLimit       int
 )
 
-func init() {
-	wsRecoverOnce.Do(func() {
-		WsRecoverHandle = func(conn *WebsocketConn, r interface{}) (respMsg string) {
-			goid, _ := runtimeutil.GoroutineID()
-			logger.LoggerStack(r, goid)
-			if msg, ok := r.(*code.CodeMessage); ok {
-				respMsg = maputil.Array().
-					Put("code", msg.Code).
-					Put("message", msg.Message).
-					Put("data", nil).
-					String()
-			} else if arrayMap, ok := r.(maputil.ArrayMap); ok {
-				respMsg = arrayMap.String()
-			} else if arrayMap, ok := r.(*maputil.ArrayMap); ok {
-				respMsg = arrayMap.String()
-			} else {
-				respMsg = maputil.Array().
-					Put("code", 0).
-					Put("message", exception.ErrorToString(r)).
-					Put("data", nil).
-					String()
-			}
-			return
-		}
-	})
-	Encode = func(data []byte) []byte {
-		return data
-	}
-	Decode = func(data []byte) []byte {
-		return data
-	}
-	FailLimit = 10
-}
-
 type WsRecoverFunc func(conn *WebsocketConn, r interface{}) string
 
 type Encrypt func(data []byte) []byte
 
 type WebsocketConn struct {
-	lock            sync.RWMutex
+	flag            string
+	groupFlag       string
 	context         *gin.Context
 	route           *router.Route
 	conn            *websocket.Conn
@@ -80,9 +43,17 @@ type WebsocketConn struct {
 	PongFailCounter int
 }
 
-func NewWebsocketConn(ctx *gin.Context, route *router.Route, conn *websocket.Conn) *WebsocketConn {
-	return &WebsocketConn{context: ctx, route: route, conn: conn, readChan: make(chan *WsReadMessage),
+func newWebsocketConn(flag, groupFlag string, ctx *gin.Context, route *router.Route, conn *websocket.Conn) *WebsocketConn {
+	return &WebsocketConn{flag: flag, groupFlag: groupFlag, context: ctx, route: route, conn: conn, readChan: make(chan *WsReadMessage),
 		writeChan: make(chan WsWriteMessage), closeChan: make(chan byte)}
+}
+
+func (this *WebsocketConn) Flag() string {
+	return this.flag
+}
+
+func (this *WebsocketConn) GroupFlag() string {
+	return this.groupFlag
 }
 
 func (this *WebsocketConn) Conn() *websocket.Conn {
@@ -95,7 +66,7 @@ func (this *WebsocketConn) Close() {
 
 func (this *WebsocketConn) close() {
 	_ = this.conn.Close()
-	WsContainer.Remove(this.conn)
+	WsContainer.Remove(this)
 	this.closeChan <- 1
 }
 
@@ -155,6 +126,10 @@ loop:
 	}
 }
 
+func (this *WebsocketConn) Send(msg string) error {
+	return this.conn.WriteMessage(websocket.TextMessage, []byte(msg))
+}
+
 func (this *WebsocketConn) WriteMessage(message string) {
 	go func(msg string) {
 		this.writeChan <- WsRespString(msg)
@@ -203,28 +178,13 @@ func conn(ctx *gin.Context) *WebsocketConn {
 	}
 }
 
-// 升级
-func upGrader(ctx *gin.Context) string {
-	client, err := UpGrader.Upgrade(ctx.Writer, ctx.Request, nil)
-	if err != nil {
-		panic(err)
-	}
-	route, err := router.GetRoutes(Serve()).Route(ctx.Request.Method, ctx.Request.URL.Path)
-	if err != nil {
-		panic(err)
-	}
-	route.SetHeader(ctx.Request.Header)
-	WsContainer.Store(ctx, route, client)
-	return client.RemoteAddr().String()
-}
-
-func wsPingFunc(websocketConn *WebsocketConn, waittime time.Duration) bool {
-	time.Sleep(waittime)
+func wsPingFunc(websocketConn *WebsocketConn, wait time.Duration) bool {
+	time.Sleep(wait)
 	err := websocketConn.conn.WriteMessage(websocket.PingMessage, []byte(PingFunc()))
 	if err != nil {
 		websocketConn.PingFailCounter++
 		if websocketConn.PingFailCounter >= FailLimit {
-			WsContainer.Remove(websocketConn.conn)
+			WsContainer.Remove(websocketConn)
 			return false
 		}
 	} else {
@@ -239,7 +199,7 @@ func wsPongFunc(websocketConn *WebsocketConn, wait time.Duration) bool {
 	if err != nil {
 		websocketConn.PongFailCounter++
 		if websocketConn.PongFailCounter >= FailLimit {
-			WsContainer.Remove(websocketConn.conn)
+			WsContainer.Remove(websocketConn)
 			return false
 		}
 	} else {
