@@ -24,8 +24,14 @@ func Upgrade(ctx *gin.Context) (string, error) {
 		return "", err
 	}
 
-	clientGroup.Append(newClient(clientGroup.Flag(), conn))
+	cg, ok := WsGroupContainer.Get(clientGroup.Flag())
+	if ok {
+		cg.Append(newClient(clientGroup.Flag(), conn))
+		WsContainer.Store(ctx, route, cg)
+	} else {
+		clientGroup.Append(newClient(clientGroup.Flag(), conn))
+		WsContainer.Store(ctx, route, clientGroup)
+	}
 
-	WsContainer.Store(ctx, route, clientGroup)
 	return clientGroup.Flag(), nil
 }
