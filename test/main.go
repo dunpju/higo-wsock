@@ -80,6 +80,13 @@ func main() {
 	wsock.ClientFlag = func() *wsock.ClientGroup {
 		return wsock.NewClientGroup("1")
 	}
+	go func() {
+		for {
+			time.Sleep(6 * time.Second)
+			fmt.Println("WsContainer", wsock.WsContainer.Len())
+			fmt.Println("WsGroupContainer", wsock.WsGroupContainer.Len())
+		}
+	}()
 	err := r.Run(":8080")
 	if err != nil {
 		log.Fatalln(err)
