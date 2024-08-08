@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/dunpju/higo-router/router"
 	"github.com/dunpju/higo-wsock/wsock"
+	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"log"
@@ -15,6 +16,7 @@ import (
 func main() {
 	router.AddServe(wsock.Serve())
 	r := wsock.Default()
+	pprof.Register(r.Gin())
 	r.Gin().Static("/index", "./dist")
 	r.Use(wsock.ConnUpGrader())
 	r.Use(func(context *gin.Context) {
@@ -83,8 +85,8 @@ func main() {
 	go func() {
 		for {
 			time.Sleep(6 * time.Second)
-			fmt.Println("WsContainer", wsock.WsContainer.Len())
-			fmt.Println("WsGroupContainer", wsock.WsGroupContainer.Len())
+			/*fmt.Println("WsContainer", wsock.WsContainer.Len())
+			fmt.Println("WsGroupContainer", wsock.WsGroupContainer.Len())*/
 		}
 	}()
 	err := r.Run(":8080")

@@ -73,11 +73,13 @@ func (this *WebsocketConn) close() {
 func (this *WebsocketConn) ping(wait time.Duration) {
 	for WsPingHandle(this, wait) {
 	}
+	this.close()
 }
 
 func (this *WebsocketConn) pong(wait time.Duration) {
 	for WsPongHandle(this, wait) {
 	}
+	this.close()
 }
 
 func (this *WebsocketConn) readLoop() {
@@ -100,28 +102,28 @@ loop:
 			msg.MessageData = Encode(msg.MessageData)
 			if WsResperror == msg.MessageType {
 				_ = this.conn.WriteMessage(websocket.TextMessage, msg.MessageData)
-				this.close()
 				break loop
 			} else {
 				err := this.conn.WriteMessage(websocket.TextMessage, msg.MessageData)
 				if err != nil {
-					this.close()
 					break loop
 				}
 			}
+		case <-this.closeChan:
+			return
 		}
 	}
 }
 
 func (this *WebsocketConn) listenLoop() {
 	defer this.recover()
-loop:
+
 	for {
 		select {
 		case msg := <-this.readChan:
 			this.dispatch(msg)
 		case <-this.closeChan:
-			goto loop
+			return
 		}
 	}
 }

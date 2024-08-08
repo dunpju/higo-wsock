@@ -14,9 +14,9 @@ import (
 func (this *WebsocketConn) recover() {
 	if r := recover(); r != nil {
 		this.writeChan <- WsRespString(WsRecoverHandle(this, r))
+		// 再次拉起监听循环调度
+		this.listenLoop()
 	}
-	// 再次拉起监听循环调度
-	this.listenLoop()
 }
 
 func (this *WebsocketConn) dispatch(msg *WsReadMessage) {
