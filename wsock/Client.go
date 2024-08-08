@@ -1,7 +1,7 @@
 package wsock
 
 import (
-	"github.com/dunpju/higo-utils/utils/maputil"
+	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"sync"
 )
@@ -70,65 +70,8 @@ func (g *ClientGroup) Range(fn func(clientFlag string, client *Client) bool) {
 	})
 }
 
-func (g *ClientGroup) Send(msg string) (err error) {
-	g.Range(func(clientFlag string, client *Client) bool {
-		err = client.conn.WriteMessage(websocket.TextMessage, []byte(msg))
-		if err != nil {
-			return false
-		}
-		return true
-	})
-	return
-}
-
-func (g *ClientGroup) WriteMessage(message string) {
-	g.Range(func(clientFlag string, client *Client) bool {
-		wsConn, ok := WsContainer.Get(clientFlag)
-		if ok {
-			wsConn.WriteMessage(message)
-		}
-		return true
-	})
-}
-
-func (g *ClientGroup) WriteMap(message *maputil.ArrayMap) {
-	g.Range(func(clientFlag string, client *Client) bool {
-		wsConn, ok := WsContainer.Get(clientFlag)
-		if ok {
-			wsConn.WriteMap(message)
-		}
-		return true
-	})
-}
-
-func (g *ClientGroup) WriteStruct(message interface{}) {
-	g.Range(func(clientFlag string, client *Client) bool {
-		wsConn, ok := WsContainer.Get(clientFlag)
-		if ok {
-			wsConn.WriteStruct(message)
-		}
-		return true
-	})
-}
-
-func (g *ClientGroup) WriteError(message string) {
-	g.Range(func(clientFlag string, client *Client) bool {
-		wsConn, ok := WsContainer.Get(clientFlag)
-		if ok {
-			wsConn.WriteError(message)
-		}
-		return true
-	})
-}
-
-func (g *ClientGroup) WriteClose() {
-	g.Range(func(clientFlag string, client *Client) bool {
-		wsConn, ok := WsContainer.Get(clientFlag)
-		if ok {
-			wsConn.WriteClose()
-		}
-		return true
-	})
+func (g *ClientGroup) Response(ctx *gin.Context) *Responder {
+	return newResponder(ctx, g)
 }
 
 type GroupContainer struct {

@@ -48,6 +48,10 @@ func newWebsocketConn(flag, groupFlag string, ctx *gin.Context, route *router.Ro
 		writeChan: make(chan WsWriteMessage), closeChan: make(chan byte)}
 }
 
+func (this *WebsocketConn) Abort() {
+	this.isAborted = true
+}
+
 func (this *WebsocketConn) Flag() string {
 	return this.flag
 }
@@ -164,7 +168,7 @@ func (this *WebsocketConn) WriteClose() {
 
 func Response(ctx *gin.Context) *WebsocketConn {
 	conn := conn(ctx)
-	conn.isAborted = true
+	conn.Abort()
 	return conn
 }
 
