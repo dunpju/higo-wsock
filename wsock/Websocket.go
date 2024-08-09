@@ -84,6 +84,7 @@ func ConnUpGrader() gin.HandlerFunc {
 					panic(err)
 				}
 				ctx.Set(WsConnIp, flag)
+				EventConn(ctx, flag)
 				ctx.Abort()
 				return
 			}
