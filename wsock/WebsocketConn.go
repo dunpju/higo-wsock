@@ -99,6 +99,11 @@ func (this *WebsocketConn) readLoop() {
 }
 
 func (this *WebsocketConn) writeLoop() {
+	defer func() {
+		if r := recover(); r != nil {
+			this.writeLoop()
+		}
+	}()
 loop:
 	for {
 		select {
@@ -185,6 +190,13 @@ func conn(ctx *gin.Context) *WebsocketConn {
 }
 
 func wsPingFunc(websocketConn *WebsocketConn, wait time.Duration) bool {
+	defer func(websocketConn *WebsocketConn, wait time.Duration) {
+		if r := recover(); r != nil {
+			if websocketConn.PingFailCounter < FailLimit {
+				wsPingFunc(websocketConn, wait)
+			}
+		}
+	}(websocketConn, wait)
 	time.Sleep(wait)
 	err := websocketConn.conn.WriteMessage(websocket.PingMessage, []byte(PingFunc()))
 	if err != nil {
@@ -200,8 +212,15 @@ func wsPingFunc(websocketConn *WebsocketConn, wait time.Duration) bool {
 }
 
 func wsPongFunc(websocketConn *WebsocketConn, wait time.Duration) bool {
+	defer func(websocketConn *WebsocketConn, wait time.Duration) {
+		if r := recover(); r != nil {
+			if websocketConn.PongFailCounter < FailLimit {
+				wsPingFunc(websocketConn, wait)
+			}
+		}
+	}(websocketConn, wait)
 	time.Sleep(wait)
-	err := websocketConn.conn.WriteMessage(websocket.PongMessage, []byte(PongFunc()))
+	err := websocketConn.conn.WriteMessage(websocket.PongMessage, []byte(PingFunc()))
 	if err != nil {
 		websocketConn.PongFailCounter++
 		if websocketConn.PongFailCounter >= FailLimit {
