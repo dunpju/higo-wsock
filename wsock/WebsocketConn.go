@@ -215,7 +215,7 @@ func wsPongFunc(websocketConn *WebsocketConn, wait time.Duration) bool {
 	defer func(websocketConn *WebsocketConn, wait time.Duration) {
 		if r := recover(); r != nil {
 			if websocketConn.PongFailCounter < FailLimit {
-				wsPingFunc(websocketConn, wait)
+				wsPongFunc(websocketConn, wait)
 			}
 		}
 	}(websocketConn, wait)
