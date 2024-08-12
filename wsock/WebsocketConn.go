@@ -220,7 +220,7 @@ func wsPongFunc(websocketConn *WebsocketConn, wait time.Duration) bool {
 		}
 	}(websocketConn, wait)
 	time.Sleep(wait)
-	err := websocketConn.conn.WriteMessage(websocket.PongMessage, []byte(PingFunc()))
+	err := websocketConn.conn.WriteMessage(websocket.PongMessage, []byte(PongFunc()))
 	if err != nil {
 		websocketConn.PongFailCounter++
 		if websocketConn.PongFailCounter >= FailLimit {
